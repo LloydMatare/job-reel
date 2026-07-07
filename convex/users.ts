@@ -173,3 +173,72 @@ export const getUserByToken = internalQuery({
       .unique();
   },
 });
+
+export const syncOrgMembership = mutation({
+  args: {
+    tokenIdentifier: v.string(),
+    clerkOrgId: v.string(),
+    role: v.string(),
+    webhookSecret: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    if (args.webhookSecret !== process.env.CLERK_WEBHOOK_SECRET) {
+      throw new Error("Unauthorized");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token_identifier", (q) =>
+        q.eq("tokenIdentifier", args.tokenIdentifier),
+      )
+      .unique();
+
+    if (!user) return;
+
+    const company = await ctx.db
+      .query("companies")
+      .withIndex("by_clerk_org", (q) => q.eq("clerkOrgId", args.clerkOrgId))
+      .unique();
+
+    if (!company) return;
+
+    await ctx.db.patch(user._id, { companyId: company._id });
+
+    if (user.role === "seeker") {
+      await ctx.db.patch(user._id, { role: "employer" });
+    }
+  },
+});
+
+export const removeOrgMembership = mutation({
+  args: {
+    tokenIdentifier: v.string(),
+    clerkOrgId: v.string(),
+    webhookSecret: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    if (args.webhookSecret !== process.env.CLERK_WEBHOOK_SECRET) {
+      throw new Error("Unauthorized");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token_identifier", (q) =>
+        q.eq("tokenIdentifier", args.tokenIdentifier),
+      )
+      .unique();
+
+    if (!user) return;
+
+    const company = await ctx.db
+      .query("companies")
+      .withIndex("by_clerk_org", (q) => q.eq("clerkOrgId", args.clerkOrgId))
+      .unique();
+
+    if (!company) return;
+
+    if (user.companyId === company._id) {
+      await ctx.db.patch(user._id, { companyId: undefined });
+    }
+  },
+});

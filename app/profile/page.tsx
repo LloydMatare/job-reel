@@ -2,12 +2,13 @@
 
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useUser } from "@clerk/nextjs";
+import { useUser, useAuth } from "@clerk/nextjs";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function ProfilePage() {
   const { user } = useUser();
+  const { orgSlug } = useAuth();
   const router = useRouter();
   const currentUser = useQuery(api.users.getMe);
   const company = useQuery(api.companies.getMyCompany);
@@ -155,6 +156,14 @@ export default function ProfilePage() {
                 <strong>Company:</strong>{" "}
                 {company ? company.name : "No company set up yet."}
               </p>
+              {company && orgSlug && (
+                <a
+                  href={`/orgs/${orgSlug}/dashboard`}
+                  className="text-sm text-blue-600 hover:underline mt-1 inline-block"
+                >
+                  Go to dashboard
+                </a>
+              )}
               {!company && (
                 <a
                   href="/company/new"

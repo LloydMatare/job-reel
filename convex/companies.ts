@@ -1,6 +1,13 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 
+function getOrgId(
+  identity: Record<string, unknown>,
+): string | undefined {
+  const id = identity.orgId;
+  return typeof id === "string" ? id : undefined;
+}
+
 function slugify(name: string): string {
   return name
     .toLowerCase()
@@ -13,6 +20,14 @@ export const getMyCompany = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
+
+    const orgId = getOrgId(identity as Record<string, unknown>);
+    if (orgId) {
+      return await ctx.db
+        .query("companies")
+        .withIndex("by_clerk_org", (q) => q.eq("clerkOrgId", orgId))
+        .unique();
+    }
 
     const user = await ctx.db
       .query("users")
@@ -44,8 +59,19 @@ export const getCompanyBySlug = query({
   },
 });
 
-export const createCompany = mutation({
+export const getCompanyByClerkOrgId = query({
+  args: { clerkOrgId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("companies")
+      .withIndex("by_clerk_org", (q) => q.eq("clerkOrgId", args.clerkOrgId))
+      .unique();
+  },
+});
+
+export const createOrgCompany = mutation({
   args: {
+    clerkOrgId: v.string(),
     name: v.string(),
     description: v.string(),
     website: v.optional(v.string()),
@@ -57,6 +83,10 @@ export const createCompany = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
+    const orgId = getOrgId(identity as Record<string, unknown>);
+    if (!orgId) throw new Error("No organization selected");
+    if (orgId !== args.clerkOrgId)
+      throw new Error("Organization mismatch");
 
     const user = await ctx.db
       .query("users")
@@ -68,21 +98,28 @@ export const createCompany = mutation({
     if (!user) throw new Error("User not found");
     if (user.role !== "employer")
       throw new Error("Only employers can create companies");
-    if (user.companyId) throw new Error("User already has a company");
+
+    const existing = await ctx.db
+      .query("companies")
+      .withIndex("by_clerk_org", (q) => q.eq("clerkOrgId", args.clerkOrgId))
+      .unique();
+
+    if (existing) throw new Error("Company already exists for this organization");
 
     let slug = slugify(args.name);
-    const existing = await ctx.db
+    const slugExists = await ctx.db
       .query("companies")
       .withIndex("by_slug", (q) => q.eq("slug", slug))
       .unique();
 
-    if (existing) {
+    if (slugExists) {
       slug = `${slug}-${Date.now()}`;
     }
 
     const companyId = await ctx.db.insert("companies", {
       name: args.name,
       slug,
+      clerkOrgId: args.clerkOrgId,
       description: args.description,
       website: args.website,
       location: args.location,
@@ -90,6 +127,7 @@ export const createCompany = mutation({
       industry: args.industry,
       logoStorageId: args.logoStorageId,
       ownerId: user._id,
+      plan: "free",
     });
 
     await ctx.db.patch(user._id, { companyId });
@@ -111,20 +149,15 @@ export const updateCompany = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
+    const orgId = getOrgId(identity as Record<string, unknown>);
+    if (!orgId) throw new Error("No organization selected");
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token_identifier", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier),
-      )
+    const company = await ctx.db
+      .query("companies")
+      .withIndex("by_clerk_org", (q) => q.eq("clerkOrgId", orgId))
       .unique();
 
-    if (!user?.companyId) throw new Error("No company found");
-
-    const company = await ctx.db.get("companies", user.companyId);
     if (!company) throw new Error("Company not found");
-    if (company.ownerId !== user._id)
-      throw new Error("Not authorized to edit this company");
 
     const patch: Record<string, unknown> = {};
     if (args.name !== undefined) {
@@ -134,9 +167,10 @@ export const updateCompany = mutation({
         .query("companies")
         .withIndex("by_slug", (q) => q.eq("slug", newSlug))
         .unique();
-      patch.slug = existing && existing._id !== company._id
-        ? `${newSlug}-${Date.now()}`
-        : newSlug;
+      patch.slug =
+        existing && existing._id !== company._id
+          ? `${newSlug}-${Date.now()}`
+          : newSlug;
     }
     if (args.description !== undefined) patch.description = args.description;
     if (args.website !== undefined) patch.website = args.website;
@@ -159,20 +193,15 @@ export const uploadCompanyLogo = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
+    const orgId = getOrgId(identity as Record<string, unknown>);
+    if (!orgId) throw new Error("No organization selected");
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token_identifier", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier),
-      )
+    const company = await ctx.db
+      .query("companies")
+      .withIndex("by_clerk_org", (q) => q.eq("clerkOrgId", orgId))
       .unique();
 
-    if (!user?.companyId) throw new Error("No company found");
-
-    const company = await ctx.db.get("companies", user.companyId);
     if (!company) throw new Error("Company not found");
-    if (company.ownerId !== user._id)
-      throw new Error("Not authorized");
 
     await ctx.db.patch(company._id, { logoStorageId: args.storageId });
   },

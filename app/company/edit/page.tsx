@@ -2,11 +2,13 @@
 
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 
 export default function EditCompanyPage() {
   const router = useRouter();
+  const { orgSlug } = useAuth();
   const company = useQuery(api.companies.getMyCompany);
   const updateCompany = useMutation(api.companies.updateCompany);
 
@@ -57,7 +59,7 @@ export default function EditCompanyPage() {
         size: size || undefined,
         industry: industry || undefined,
       });
-      router.push("/profile");
+      router.push(orgSlug ? `/orgs/${orgSlug}/dashboard` : "/profile");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {

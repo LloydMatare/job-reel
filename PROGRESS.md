@@ -9,11 +9,14 @@
 │  Phase 0 — Foundation Setup          ▓▓▓▓▓▓▓▓▓▓ 100%  │
 │  Phase 1 — Database Schema           ▓▓▓▓▓▓▓▓▓▓ 100%  │
 │  Phase 2 — Auth & Profiles           ▓▓▓▓▓▓▓▓▓▓ 100%  │
-│  Phase 3 — Job Listings & Search     ░░░░░░░░░░░░   0%  │
-│  Phase 4 — Application System        ░░░░░░░░░░░░   0%  │
-│  Phase 5 — UI/UX & Dashboards        ░░░░░░░░░░░░   0%  │
-│  Phase 6 — Advanced Features         ░░░░░░░░░░░░   0%  │
-│  Phase 7 — Testing & Deploy          ░░░░░░░░░░░░   0%  │
+│  Phase 3 — Clerk Orgs Integration    ▓▓▓▓▓▓▓▓▓▓ 100%  │
+│  Phase 4 — Clerk Billing              ▓▓▓▓▓▓▓▓▓▓ 100%  │
+│  Phase 5 — Landing Page              ▓▓▓▓▓▓▓▓▓▓ 100%  │
+│  Phase 6 — Job Postings CRUD         ░░░░░░░░░░░░   0%  │
+│  Phase 7 — Application System        ░░░░░░░░░░░░   0%  │
+│  Phase 8 — UI/UX & Dashboards        ░░░░░░░░░░░░   0%  │
+│  Phase 9 — Advanced Features         ░░░░░░░░░░░░   0%  │
+│  Phase 10 — Testing & Deploy         ░░░░░░░░░░░░   0%  │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -24,11 +27,14 @@
 | 0 — Foundation Setup | ✅ Complete | 2026-07-07 |
 | 1 — Database Schema | ✅ Complete | 2026-07-07 |
 | 2 — Auth & Profiles | ✅ Complete | 2026-07-07 |
-| 3 — Job Listings & Search | ⬜ Not Started | — |
-| 4 — Application System | ⬜ Not Started | — |
-| 5 — UI/UX & Dashboards | ⬜ Not Started | — |
-| 6 — Advanced Features | ⬜ Not Started | — |
-| 7 — Testing & Deploy | ⬜ Not Started | — |
+| 3 — Clerk Orgs Integration | ✅ Complete | 2026-07-07 |
+| 4 — Clerk Billing | ✅ Complete | 2026-07-07 |
+| 5 — Landing Page | ✅ Complete | 2026-07-07 |
+| 6 — Job Postings CRUD | ⬜ Not Started | — |
+| 7 — Application System | ⬜ Not Started | — |
+| 8 — UI/UX & Dashboards | ⬜ Not Started | — |
+| 9 — Advanced Features | ⬜ Not Started | — |
+| 10 — Testing & Deploy | ⬜ Not Started | — |
 
 ## What Was Done
 
@@ -60,6 +66,41 @@
 - `middleware.ts` updated with protected routes: `/profile/*`, `/dashboard/*`, `/company/*`, `/jobs/new`, `/jobs/*/edit`
 - `CLERK_WEBHOOK_SECRET` env var set on both dev and prod deployments
 
+### Phase 3 — Clerk Organizations Integration
+- Schema: added `clerkOrgId` field to `companies` table with `by_clerk_org` index
+- `convex/companies.ts`: added `getCompanyByClerkOrgId` query, `createOrgCompany` mutation (takes `clerkOrgId`), updated `getMyCompany`/`updateCompany`/`uploadCompanyLogo` to use `identity.orgId` for org-scoped auth instead of `ownerId`
+- `convex/users.ts`: added `syncOrgMembership` and `removeOrgMembership` mutations for webhook-driven org member syncing (links users to companies via `companyId`)
+- `app/api/clerk-webhook/route.ts`: handles `organizationMembership.created/updated/deleted` events to sync org memberships
+- `app/orgs/[slug]/layout.tsx`: org-scoped layout with `OrganizationSwitcher`, sidebar nav (Dashboard, Members, Settings, Billing), mobile bottom nav
+- `app/orgs/[slug]/dashboard/page.tsx`: employer dashboard with stats cards (Active Jobs, Applicants, Team Members) and job listings section
+- `app/orgs/[slug]/settings/page.tsx`: wrapped `OrganizationProfile` component for org settings
+- `app/orgs/[slug]/members/page.tsx`: wrapped `OrganizationProfile` component for member management
+- `app/company/new/page.tsx`: creates Clerk Org first via `createOrganization`, then creates company doc with `clerkOrgId` linkage
+- `app/(auth)/role-select/page.tsx`: employer redirect uses `orgSlug` when available for `/orgs/[slug]/dashboard`
+- `app/company/edit/page.tsx`: updated redirect to org dashboard
+- `app/profile/page.tsx`: added "Go to dashboard" link for employers
+- `app/page.tsx`: header now shows "Dashboard" link for employers, "Find Jobs" nav link
+- `middleware.ts`: added `/orgs/:slug(.*)` as protected route
+
+### Phase 4 — Clerk Billing
+- Schema: added `plan: "free" | "pro" | "enterprise"` field to companies table
+- `convex/billing.ts`: plan limits config (PLAN_LIMITS, PLAN_PRICES), `getOrgPlan` query, `checkBillingLimit` query (checks active jobs / team seats against plan), `updateOrgPlan` mutation (via webhook)
+- `app/api/clerk-webhook/route.ts`: handles `organization.updated` (billing_plan field) and `organization.billing.plan.updated` events
+- `app/orgs/[slug]/billing/page.tsx`: billing dashboard with current plan card, usage stats, plan comparison grid (Free/Pro/Enterprise), upgrade CTAs
+
+### Phase 5 — Landing Page
+- `components/Header.tsx`: global nav with Logo, Find Jobs, role-aware Dashboard link, auth buttons (Sign In / Sign Up / UserButton)
+- `components/Footer.tsx`: 4-column footer with links for seekers, employers, company info
+- `components/JobCard.tsx`: job listing card with company avatar, title, badges (location type, employment type, category), salary range, skills, posted date
+- `components/SearchBar.tsx`: search input with category dropdown and search button, form submits to `/jobs?q=&category=`
+- `components/ui/Button.tsx`: button component (primary/secondary/outline/ghost variants, sm/md/lg sizes)
+- `components/ui/Badge.tsx`: badge component (default/success/warning/danger/info variants)
+- `components/ui/Card.tsx`: card wrapper with optional hover shadow
+- `components/ui/Skeleton.tsx`: loading placeholder
+- `convex/categories.ts`: `listCategories` and `getCategory` queries
+- `convex/jobs.ts`: `listJobs`, `searchJobs` (full-text), `getJob`, `getFeaturedJobs`, `getJobsByCompany` (public queries), `createJob`, `updateJob`, `closeJob`, `reopenJob`, `deleteJob`, `getEmployerJobs` (employer mutations)
+- `app/page.tsx`: full landing page with Hero (gradient + search), Featured Jobs (real data from Convex, with skeleton/empty states), How It Works (seekers + employers), Browse by Category grid, CTA section
+
 ## Detailed Specs
 
 - [Phase 0 — Foundation Setup](context/feature-specs/phase-0-foundation-setup.md)
@@ -70,3 +111,4 @@
 - [Phase 5 — UI/UX & Dashboards](context/feature-specs/phase-5-ui-ux-and-dashboards.md)
 - [Phase 6 — Advanced Features](context/feature-specs/phase-6-advanced-features.md)
 - [Phase 7 — Testing & Deploy](context/feature-specs/phase-7-testing-and-deployment.md)
+- [Landing Page Plan](context/landing-specs/landing-page-plan.md)

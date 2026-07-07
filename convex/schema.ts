@@ -28,6 +28,11 @@ export default defineSchema({
     size: v.optional(v.string()),
     industry: v.optional(v.string()),
     ownerId: v.id("users"),
+    plan: v.union(
+      v.literal("free"),
+      v.literal("pro"),
+      v.literal("enterprise"),
+    ),
   })
     .index("by_slug", ["slug"])
     .index("by_owner", ["ownerId"])

@@ -1,13 +1,18 @@
 "use client";
 
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useOrganizationList, useOrganization, useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function NewCompanyPage() {
   const router = useRouter();
-  const createCompany = useMutation(api.companies.createCompany);
+  const { createOrganization } = useOrganizationList();
+  const { organization } = useOrganization();
+  const { orgSlug } = useAuth();
+  const createOrgCompany = useMutation(api.companies.createOrgCompany);
+  const company = useQuery(api.companies.getMyCompany);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -18,6 +23,12 @@ export default function NewCompanyPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    if (company) {
+      router.push(orgSlug ? `/orgs/${orgSlug}/dashboard` : "/profile");
+    }
+  }, [company, router, orgSlug]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !description.trim()) {
@@ -27,8 +38,26 @@ export default function NewCompanyPage() {
 
     setSubmitting(true);
     setError("");
+
     try {
-      await createCompany({
+      let clerkOrgId: string;
+      let orgSlug: string;
+
+      const activeOrg = organization;
+
+      if (activeOrg) {
+        clerkOrgId = activeOrg.id;
+        orgSlug = activeOrg.slug ?? activeOrg.id;
+      } else if (createOrganization) {
+        const org = await createOrganization({ name: name.trim() });
+        clerkOrgId = org.id;
+        orgSlug = org.slug ?? org.id;
+      } else {
+        throw new Error("Unable to create organization");
+      }
+
+      await createOrgCompany({
+        clerkOrgId,
         name: name.trim(),
         description: description.trim(),
         website: website.trim() || undefined,
@@ -36,7 +65,8 @@ export default function NewCompanyPage() {
         size: size || undefined,
         industry: industry || undefined,
       });
-      router.push("/profile");
+
+      router.push(`/orgs/${orgSlug}/dashboard`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {

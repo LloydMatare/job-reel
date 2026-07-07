@@ -73,6 +73,80 @@ export async function POST(req: Request) {
       });
       break;
     }
+    case "organizationMembership.created":
+    case "organizationMembership.updated": {
+      const membershipData = data as Record<string, unknown>;
+      const orgId = (membershipData.organization as Record<string, unknown>)
+        ?.id as string;
+      const userId = (
+        membershipData.public_user_data as Record<string, unknown>
+      )?.user_id as string;
+      const role = membershipData.role as string;
+
+      if (orgId && userId) {
+        await fetchMutation(api.users.syncOrgMembership, {
+          tokenIdentifier: userId,
+          clerkOrgId: orgId,
+          role,
+          webhookSecret: process.env.CLERK_WEBHOOK_SECRET,
+        });
+      }
+      break;
+    }
+    case "organization.updated": {
+      const orgData = data as Record<string, unknown>;
+      const orgId = orgData.id as string;
+      const billingPlan = (orgData as Record<string, unknown>)
+        .billing_plan as string;
+
+      if (orgId && billingPlan) {
+        const plan = ["free", "pro", "enterprise"].includes(billingPlan)
+          ? (billingPlan as "free" | "pro" | "enterprise")
+          : "free";
+
+        await fetchMutation(api.billing.updateOrgPlan, {
+          clerkOrgId: orgId,
+          plan,
+          webhookSecret: process.env.CLERK_WEBHOOK_SECRET,
+        });
+      }
+      break;
+    }
+    case "organization.billing.plan.updated": {
+      const billingData = data as Record<string, unknown>;
+      const billingOrgId = billingData.organization_id as string;
+      const newPlan = billingData.plan as string;
+
+      if (billingOrgId && newPlan) {
+        const plan = ["free", "pro", "enterprise"].includes(newPlan)
+          ? (newPlan as "free" | "pro" | "enterprise")
+          : "free";
+
+        await fetchMutation(api.billing.updateOrgPlan, {
+          clerkOrgId: billingOrgId,
+          plan,
+          webhookSecret: process.env.CLERK_WEBHOOK_SECRET,
+        });
+      }
+      break;
+    }
+    case "organizationMembership.deleted": {
+      const membershipData = data as Record<string, unknown>;
+      const orgId = (membershipData.organization as Record<string, unknown>)
+        ?.id as string;
+      const userId = (
+        membershipData.public_user_data as Record<string, unknown>
+      )?.user_id as string;
+
+      if (orgId && userId) {
+        await fetchMutation(api.users.removeOrgMembership, {
+          tokenIdentifier: userId,
+          clerkOrgId: orgId,
+          webhookSecret: process.env.CLERK_WEBHOOK_SECRET,
+        });
+      }
+      break;
+    }
   }
 
   return NextResponse.json({ ok: true });

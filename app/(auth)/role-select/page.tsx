@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser } from "@clerk/nextjs";
+import { useUser, useAuth } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useRouter } from "next/navigation";
@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 
 export default function RoleSelectPage() {
   const { user } = useUser();
+  const { orgSlug } = useAuth();
   const router = useRouter();
   const onboardUser = useMutation(api.users.onboardUser);
   const currentUser = useQuery(api.users.getMe);
@@ -16,12 +17,16 @@ export default function RoleSelectPage() {
   useEffect(() => {
     if (currentUser && currentUser.onboarded) {
       if (currentUser.role === "employer") {
-        router.push("/dashboard/employer");
+        if (orgSlug) {
+          router.push(`/orgs/${orgSlug}/dashboard`);
+        } else {
+          router.push("/company/new");
+        }
       } else {
         router.push("/");
       }
     }
-  }, [currentUser, router]);
+  }, [currentUser, router, orgSlug]);
 
   if (!user || currentUser?.onboarded) return null;
 
