@@ -18,6 +18,34 @@ export const getMe = query({
   },
 });
 
+export const ensureUser = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const existing = await ctx.db
+      .query("users")
+      .withIndex("by_token_identifier", (q) =>
+        q.eq("tokenIdentifier", identity.tokenIdentifier),
+      )
+      .unique();
+
+    if (existing) return existing._id;
+
+    const id = await ctx.db.insert("users", {
+      tokenIdentifier: identity.tokenIdentifier,
+      name: identity.name ?? identity.email ?? "",
+      email: identity.email ?? identity.tokenIdentifier,
+      avatarUrl: identity.pictureUrl ?? undefined,
+      role: "seeker",
+      onboarded: false,
+    });
+
+    return id;
+  },
+});
+
 export const getUserById = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {

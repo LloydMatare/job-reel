@@ -4,9 +4,11 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useOrganization } from "@clerk/nextjs";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useState } from "react";
 
 export default function OrgDashboardPage() {
+  const params = useParams();
   const { organization } = useOrganization();
   const company = useQuery(api.companies.getMyCompany);
   const jobs = useQuery(api.jobs.getEmployerJobs);
@@ -138,8 +140,13 @@ export default function OrgDashboardPage() {
                         {job.status}
                       </span>
                     </td>
-                    <td className="px-5 py-4 text-gray-600">
-                      {job.applicationCount ?? 0}
+                    <td className="px-5 py-4">
+                      <Link
+                        href={`/orgs/${params.slug}/jobs/${job._id}/applications`}
+                        className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                      >
+                        {job.applicationCount ?? 0}
+                      </Link>
                     </td>
                     <td className="px-5 py-4 text-gray-500">
                       {new Date(job._creationTime).toLocaleDateString()}

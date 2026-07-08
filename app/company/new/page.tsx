@@ -8,10 +8,11 @@ import { useState, useEffect } from "react";
 
 export default function NewCompanyPage() {
   const router = useRouter();
-  const { createOrganization } = useOrganizationList();
+  const { createOrganization, setActive } = useOrganizationList();
   const { organization } = useOrganization();
-  const { orgSlug } = useAuth();
+  const { orgSlug, getToken } = useAuth();
   const createOrgCompany = useMutation(api.companies.createOrgCompany);
+  const ensureUser = useMutation(api.users.ensureUser);
   const company = useQuery(api.companies.getMyCompany);
 
   const [name, setName] = useState("");
@@ -22,12 +23,79 @@ export default function NewCompanyPage() {
   const [industry, setIndustry] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [pending, setPending] = useState<{
+    clerkOrgId: string;
+    orgSlug: string;
+    name: string;
+    description: string;
+    website?: string;
+    location?: string;
+    size?: string;
+    industry?: string;
+  } | null>(null);
 
   useEffect(() => {
     if (company) {
       router.push(orgSlug ? `/orgs/${orgSlug}/dashboard` : "/profile");
     }
   }, [company, router, orgSlug]);
+
+  useEffect(() => {
+    if (!pending) return;
+    // Wait until Clerk reports the target org as active. That change is what
+    // makes ConvexProviderWithClerk re-mint the Convex token with the org claim.
+    if (organization?.id !== pending.clerkOrgId) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        // Force a fresh "convex" token so the active-org claim is present before
+        // the mutation is sent.
+        const token = await getToken({ template: "convex", skipCache: true });
+        // TEMP debug: confirm the org is active and inspect the claims the
+        // "convex" JWT template actually emits. Remove once verified.
+        try {
+          const claims = token
+            ? (JSON.parse(
+                atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")),
+              ) as Record<string, unknown>)
+            : null;
+          console.log(
+            "[org-debug] activeOrg =",
+            organization?.id,
+            "| target =",
+            pending.clerkOrgId,
+            "| claimKeys =",
+            claims ? Object.keys(claims) : null,
+            "| org =",
+            { orgId: claims?.orgId, org_id: claims?.org_id, o: claims?.o },
+          );
+        } catch (decodeErr) {
+          console.log("[org-debug] token decode failed", decodeErr);
+        }
+        await createOrgCompany({
+          clerkOrgId: pending.clerkOrgId,
+          name: pending.name,
+          description: pending.description,
+          website: pending.website,
+          location: pending.location,
+          size: pending.size,
+          industry: pending.industry,
+        });
+        if (!cancelled) router.push(`/orgs/${pending.orgSlug}/dashboard`);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Something went wrong");
+          setSubmitting(false);
+          setPending(null);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pending, organization?.id, getToken, createOrgCompany, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,24 +108,29 @@ export default function NewCompanyPage() {
     setError("");
 
     try {
+      await ensureUser();
+
       let clerkOrgId: string;
-      let orgSlug: string;
+      let targetSlug: string;
 
-      const activeOrg = organization;
-
-      if (activeOrg) {
-        clerkOrgId = activeOrg.id;
-        orgSlug = activeOrg.slug ?? activeOrg.id;
-      } else if (createOrganization) {
+      if (organization) {
+        clerkOrgId = organization.id;
+        targetSlug = organization.slug ?? organization.id;
+      } else if (createOrganization && setActive) {
         const org = await createOrganization({ name: name.trim() });
         clerkOrgId = org.id;
-        orgSlug = org.slug ?? org.id;
+        targetSlug = org.slug ?? org.id;
+        // Make the new org active so Clerk mints a session token that carries it.
+        await setActive({ organization: org.id });
       } else {
         throw new Error("Unable to create organization");
       }
 
-      await createOrgCompany({
+      // Defer the mutation: Convex must re-mint its token with the active-org
+      // claim first. The effect above runs it once the active org is reflected.
+      setPending({
         clerkOrgId,
+        orgSlug: targetSlug,
         name: name.trim(),
         description: description.trim(),
         website: website.trim() || undefined,
@@ -65,11 +138,8 @@ export default function NewCompanyPage() {
         size: size || undefined,
         industry: industry || undefined,
       });
-
-      router.push(`/orgs/${orgSlug}/dashboard`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
       setSubmitting(false);
     }
   };

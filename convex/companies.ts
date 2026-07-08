@@ -4,8 +4,17 @@ import { query, mutation } from "./_generated/server";
 function getOrgId(
   identity: Record<string, unknown>,
 ): string | undefined {
-  const id = identity.orgId;
-  return typeof id === "string" ? id : undefined;
+  // Clerk can surface the active organization under different claim names,
+  // depending on how the "convex" JWT template is configured: "orgId", the
+  // Clerk default "org_id", or a nested organization object "o".
+  const nested = identity.o as Record<string, unknown> | undefined;
+  const candidates = [identity.orgId, identity.org_id, nested?.id];
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.length > 0) {
+      return candidate;
+    }
+  }
+  return undefined;
 }
 
 function slugify(name: string): string {
@@ -83,8 +92,18 @@ export const createOrgCompany = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    const orgId = getOrgId(identity as Record<string, unknown>);
-    if (!orgId) throw new Error("No organization selected");
+    const claims = identity as Record<string, unknown>;
+    const orgId = getOrgId(claims);
+    if (!orgId) {
+      // TEMP debug: reveals exactly which claims Convex received so we can tell
+      // whether the "convex" JWT template emits the org id at all, and under
+      // what name. Remove once the root cause is confirmed.
+      console.log(
+        "[org-debug] createOrgCompany: no org claim; identity keys =",
+        Object.keys(claims),
+      );
+      throw new Error("No organization selected");
+    }
     if (orgId !== args.clerkOrgId)
       throw new Error("Organization mismatch");
 

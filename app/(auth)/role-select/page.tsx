@@ -11,6 +11,7 @@ export default function RoleSelectPage() {
   const { orgSlug } = useAuth();
   const router = useRouter();
   const onboardUser = useMutation(api.users.onboardUser);
+  const ensureUser = useMutation(api.users.ensureUser);
   const currentUser = useQuery(api.users.getMe);
   const [submitting, setSubmitting] = useState(false);
 
@@ -33,6 +34,7 @@ export default function RoleSelectPage() {
   const handleRoleSelect = async (role: "seeker" | "employer") => {
     setSubmitting(true);
     try {
+      await ensureUser();
       await onboardUser({
         role,
         name: user.fullName ?? "",
@@ -65,7 +67,11 @@ export default function RoleSelectPage() {
             disabled={submitting}
             className="bg-white rounded-xl border-2 border-gray-200 p-8 text-left hover:border-blue-500 hover:shadow-lg transition-all disabled:opacity-50"
           >
-            <div className="text-4xl mb-4">🔍</div>
+            <div className="mb-4">
+              <svg className="w-10 h-10 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+              </svg>
+            </div>
             <h2 className="text-2xl font-semibold text-gray-900 mb-2">
               I&apos;m Looking for a Job
             </h2>
@@ -80,7 +86,11 @@ export default function RoleSelectPage() {
             disabled={submitting}
             className="bg-white rounded-xl border-2 border-gray-200 p-8 text-left hover:border-blue-500 hover:shadow-lg transition-all disabled:opacity-50"
           >
-            <div className="text-4xl mb-4">🏢</div>
+            <div className="mb-4">
+              <svg className="w-10 h-10 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
+              </svg>
+            </div>
             <h2 className="text-2xl font-semibold text-gray-900 mb-2">
               I&apos;m Hiring
             </h2>

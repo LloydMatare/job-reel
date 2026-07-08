@@ -33,12 +33,20 @@ export function Header() {
                 </Link>
               )}
               {currentUser?.role === "seeker" && (
-                <Link
-                  href="/profile"
-                  className="text-gray-600 hover:text-gray-900 text-sm font-medium"
-                >
-                  My Profile
-                </Link>
+                <>
+                  <Link
+                    href="/my-applications"
+                    className="text-gray-600 hover:text-gray-900 text-sm font-medium"
+                  >
+                    My Applications
+                  </Link>
+                  <Link
+                    href="/profile"
+                    className="text-gray-600 hover:text-gray-900 text-sm font-medium"
+                  >
+                    Profile
+                  </Link>
+                </>
               )}
             </nav>
           </div>
