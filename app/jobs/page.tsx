@@ -8,9 +8,9 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { JobCard } from "@/components/JobCard";
 import { SearchBar } from "@/components/SearchBar";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/Badge";
-import { Skeleton } from "@/components/ui/Skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 import { SalarySlider } from "@/components/SalarySlider";
 
 export default function JobsPage() {

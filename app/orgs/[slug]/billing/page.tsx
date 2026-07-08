@@ -2,14 +2,40 @@
 
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useOrganization } from "@clerk/nextjs";
+import {
+  Briefcase,
+  Users,
+  Star,
+  BarChart3,
+  Check,
+  Minus,
+  CreditCard,
+} from "lucide-react";
 
 type Plan = "free" | "pro" | "enterprise";
 
-const PLAN_LIMITS: Record<Plan, { activeJobs: number; teamSeats: number; featuredJobs: boolean; analytics: boolean }> = {
+const PLAN_LIMITS: Record<
+  Plan,
+  {
+    activeJobs: number;
+    teamSeats: number;
+    featuredJobs: boolean;
+    analytics: boolean;
+  }
+> = {
   free: { activeJobs: 1, teamSeats: 2, featuredJobs: false, analytics: false },
-  pro: { activeJobs: 10, teamSeats: 10, featuredJobs: true, analytics: true },
-  enterprise: { activeJobs: 999, teamSeats: 999, featuredJobs: true, analytics: true },
+  pro: {
+    activeJobs: 10,
+    teamSeats: 10,
+    featuredJobs: true,
+    analytics: true,
+  },
+  enterprise: {
+    activeJobs: 999,
+    teamSeats: 999,
+    featuredJobs: true,
+    analytics: true,
+  },
 };
 
 const PLAN_PRICES: Record<Plan, string> = {
@@ -18,37 +44,19 @@ const PLAN_PRICES: Record<Plan, string> = {
   enterprise: "Custom",
 };
 
+
 export default function BillingPage() {
-  const { organization, membership } = useOrganization();
   const planInfo = useQuery(api.billing.getOrgPlan);
-
-  const isAdmin =
-    membership &&
-    (membership.role === "org:admin" || membership.role === "org:owner");
-
-  const plans: { key: Plan; name: string; description: string }[] = [
-    {
-      key: "free",
-      name: "Free",
-      description: "For small teams getting started",
-    },
-    {
-      key: "pro",
-      name: "Pro",
-      description: "For growing companies",
-    },
-    {
-      key: "enterprise",
-      name: "Enterprise",
-      description: "For large organizations",
-    },
-  ];
 
   if (planInfo === undefined) {
     return (
-      <div className="space-y-6 animate-pulse">
-        <div className="h-8 w-48 bg-gray-200 rounded" />
-        <div className="h-32 bg-gray-200 rounded-xl" />
+      <div className="space-y-6">
+        <div className="h-8 w-48 bg-muted rounded-lg animate-pulse" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-64 bg-muted rounded-xl animate-pulse" />
+          ))}
+        </div>
       </div>
     );
   }
@@ -56,54 +64,111 @@ export default function BillingPage() {
   const currentPlan = planInfo?.plan ?? "free";
   const limits = planInfo?.limits ?? PLAN_LIMITS.free;
 
+  const currentPlanLimits = [
+    {
+      label: "Active Jobs",
+      value:
+        limits.activeJobs === 999 ? "Unlimited" : `${limits.activeJobs}`,
+      icon: Briefcase,
+      color: "bg-blue-50 text-blue-600",
+    },
+    {
+      label: "Team Seats",
+      value:
+        limits.teamSeats === 999 ? "Unlimited" : `${limits.teamSeats}`,
+      icon: Users,
+      color: "bg-emerald-50 text-emerald-600",
+    },
+    {
+      label: "Featured Jobs",
+      value: limits.featuredJobs ? "Included" : "Not included",
+      icon: Star,
+      color: "bg-amber-50 text-amber-600",
+    },
+    {
+      label: "Analytics",
+      value: limits.analytics ? "Included" : "Not included",
+      icon: BarChart3,
+      color: "bg-violet-50 text-violet-600",
+    },
+  ];
+
+  const plans: {
+    key: Plan;
+    name: string;
+    description: string;
+    highlighted: boolean;
+  }[] = [
+    {
+      key: "free",
+      name: "Free",
+      description: "For small teams getting started",
+      highlighted: false,
+    },
+    {
+      key: "pro",
+      name: "Pro",
+      description: "For growing companies",
+      highlighted: true,
+    },
+    {
+      key: "enterprise",
+      name: "Enterprise",
+      description: "For large organizations",
+      highlighted: false,
+    },
+  ];
+
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Billing</h1>
-        <p className="text-gray-600 mt-1">
+        <h1 className="text-2xl font-bold text-foreground tracking-tight">
+          Billing
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">
           Manage your subscription and usage limits.
         </p>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-2">
-          Current Plan:{" "}
-          <span className="text-blue-600 capitalize">{currentPlan}</span>
-        </h2>
-        <p className="text-sm text-gray-500 mb-4">
-          {PLAN_PRICES[currentPlan as Plan] ?? "$0"}
-        </p>
+      <div className="bg-card border border-border rounded-xl p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="size-10 rounded-xl bg-blue-50 flex items-center justify-center">
+              <CreditCard className="size-5 text-blue-600" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-foreground text-sm">
+                Current Plan
+              </h2>
+              <p className="text-2xl font-bold text-blue-600 capitalize mt-0.5">
+                {currentPlan}
+              </p>
+            </div>
+          </div>
+          <span className="text-sm text-muted-foreground">
+            {PLAN_PRICES[currentPlan as Plan]}
+          </span>
+        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="bg-gray-50 rounded-lg p-4">
-            <p className="text-sm text-gray-500">Active Jobs</p>
-            <p className="text-lg font-semibold text-gray-900">
-              {limits.activeJobs === 999 ? "Unlimited" : limits.activeJobs}
-            </p>
-          </div>
-          <div className="bg-gray-50 rounded-lg p-4">
-            <p className="text-sm text-gray-500">Team Seats</p>
-            <p className="text-lg font-semibold text-gray-900">
-              {limits.teamSeats === 999 ? "Unlimited" : `${limits.teamSeats}`}
-            </p>
-          </div>
-          <div className="bg-gray-50 rounded-lg p-4">
-            <p className="text-sm text-gray-500">Featured Jobs</p>
-            <p className="text-lg font-semibold text-gray-900">
-              {limits.featuredJobs ? "Included" : "Not included"}
-            </p>
-          </div>
-          <div className="bg-gray-50 rounded-lg p-4">
-            <p className="text-sm text-gray-500">Analytics</p>
-            <p className="text-lg font-semibold text-gray-900">
-              {limits.analytics ? "Included" : "Not included"}
-            </p>
-          </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {currentPlanLimits.map((item) => {
+            const Icon = item.icon;
+            return (
+              <div
+                key={item.label}
+                className={`${item.color} rounded-xl p-4`}
+              >
+                <Icon className="size-4 mb-2" />
+                <p className="text-xs opacity-70">{item.label}</p>
+                <p className="text-lg font-bold mt-0.5">{item.value}</p>
+              </div>
+            );
+          })}
         </div>
       </div>
 
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        <h2 className="font-semibold text-foreground mb-4">
           Available Plans
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -111,82 +176,94 @@ export default function BillingPage() {
             const planLimits = PLAN_LIMITS[plan.key];
             const isCurrent = currentPlan === plan.key;
 
+            const featureList = [
+              {
+                label: `${planLimits.activeJobs === 999 ? "Unlimited" : planLimits.activeJobs} active jobs`,
+                included: true,
+              },
+              {
+                label: `${planLimits.teamSeats === 999 ? "Unlimited" : planLimits.teamSeats} team seats`,
+                included: true,
+              },
+              {
+                label: "Featured jobs",
+                included: planLimits.featuredJobs,
+              },
+              {
+                label: "Analytics",
+                included: planLimits.analytics,
+              },
+            ];
+
             return (
               <div
                 key={plan.key}
-                className={`bg-white border rounded-xl p-6 ${
-                  plan.key === "pro"
-                    ? "border-blue-500 ring-2 ring-blue-100"
-                    : "border-gray-200"
-                } ${isCurrent ? "opacity-80" : ""}`}
+                className={`relative bg-card border rounded-xl p-6 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 ${
+                  plan.highlighted
+                    ? "border-blue-500 ring-1 ring-blue-500/20"
+                    : "border-border"
+                } ${isCurrent ? "opacity-90" : ""}`}
               >
-                <h3 className="text-xl font-bold text-gray-900 capitalize mb-1">
-                  {plan.name}
-                </h3>
-                <p className="text-sm text-gray-500 mb-4">{plan.description}</p>
-                <p className="text-2xl font-bold text-gray-900 mb-4">
+                {plan.highlighted && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[10px] font-semibold px-3 py-1 rounded-full tracking-wide uppercase">
+                    Most Popular
+                  </div>
+                )}
+
+                <div className="flex items-center gap-3 mb-4">
+                  <div
+                    className={`size-10 rounded-xl flex items-center justify-center ${
+                      plan.highlighted
+                        ? "bg-blue-100 text-blue-600"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    <Briefcase className="size-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-foreground capitalize">
+                      {plan.name}
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      {plan.description}
+                    </p>
+                  </div>
+                </div>
+
+                <p className="text-2xl font-bold text-foreground mb-5">
                   {PLAN_PRICES[plan.key]}
+                  <span className="text-sm font-normal text-muted-foreground">
+                    {plan.key !== "enterprise" ? "" : ""}
+                  </span>
                 </p>
 
-                <ul className="space-y-2 mb-6 text-sm">
-                  <li className="flex items-center gap-2">
-                    <span
-                      className={
-                        planLimits.activeJobs === 999
-                          ? "text-blue-600"
-                          : "text-gray-700"
-                      }
-                    >
-                      {planLimits.activeJobs === 999
-                        ? "Unlimited"
-                        : planLimits.activeJobs}{" "}
-                      active jobs
-                    </span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span
-                      className={
-                        planLimits.teamSeats === 999
-                          ? "text-blue-600"
-                          : "text-gray-700"
-                      }
-                    >
-                      {planLimits.teamSeats === 999
-                        ? "Unlimited"
-                        : planLimits.teamSeats}{" "}
-                      team seats
-                    </span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span
-                      className={
-                        planLimits.featuredJobs
-                          ? "text-blue-600"
-                          : "text-gray-400"
-                      }
-                    >
-                      {planLimits.featuredJobs
-                        ? "Featured jobs"
-                        : "No featured jobs"}
-                    </span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span
-                      className={
-                        planLimits.analytics
-                          ? "text-blue-600"
-                          : "text-gray-400"
-                      }
-                    >
-                      {planLimits.analytics
-                        ? "Analytics included"
-                        : "No analytics"}
-                    </span>
-                  </li>
+                <ul className="space-y-3 mb-6">
+                  {featureList.map((feature) => (
+                    <li key={feature.label} className="flex items-center gap-2.5 text-sm">
+                      {feature.included ? (
+                        <div className="size-5 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
+                          <Check className="size-3 text-emerald-600" />
+                        </div>
+                      ) : (
+                        <div className="size-5 rounded-full bg-muted flex items-center justify-center shrink-0">
+                          <Minus className="size-3 text-muted-foreground" />
+                        </div>
+                      )}
+                      <span
+                        className={
+                          feature.included
+                            ? "text-foreground"
+                            : "text-muted-foreground"
+                        }
+                      >
+                        {feature.label}
+                      </span>
+                    </li>
+                  ))}
                 </ul>
 
                 {isCurrent ? (
-                  <span className="block w-full text-center py-2 px-4 rounded-lg bg-gray-100 text-gray-500 text-sm font-medium">
+                  <span className="block w-full text-center py-2.5 px-4 rounded-xl bg-muted text-muted-foreground text-sm font-medium">
                     Current Plan
                   </span>
                 ) : (
@@ -194,18 +271,13 @@ export default function BillingPage() {
                     href="https://clerk.com/account"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`block w-full text-center py-2 px-4 rounded-lg text-sm font-medium ${
-                      isAdmin
-                        ? "bg-blue-600 text-white hover:bg-blue-700"
-                        : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    className={`block w-full text-center py-2.5 px-4 rounded-xl text-sm font-medium transition-all ${
+                      plan.key === "pro"
+                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-lg hover:-translate-y-0.5"
+                        : "bg-muted text-foreground hover:bg-muted/80"
                     }`}
-                    onClick={(e) => {
-                      if (!isAdmin) {
-                        e.preventDefault();
-                      }
-                    }}
                   >
-                    {isAdmin ? "Upgrade" : "Contact Admin"}
+                    {plan.key === "pro" ? "Upgrade to Pro" : "Contact Sales"}
                   </a>
                 )}
               </div>

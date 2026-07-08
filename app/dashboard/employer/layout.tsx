@@ -5,98 +5,161 @@ import { useRouter } from "next/navigation";
 import { useEffect, ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Sidebar, SIDEBAR_ICONS } from "@/components/Sidebar";
 import { UserButton } from "@clerk/nextjs";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
+import {
+  LayoutDashboard,
+  Briefcase,
+  FileText,
+  Building2,
+  ChartBar,
+  Bell,
+  Search,
+  ArrowUpRight,
+} from "lucide-react";
 
 const NAV_ITEMS = [
-  { href: "/dashboard/employer", label: "Overview", icon: SIDEBAR_ICONS.dashboard },
-  { href: "/dashboard/employer/applications", label: "Applications", icon: SIDEBAR_ICONS.applications },
-  { href: "/dashboard/employer/analytics", label: "Analytics", icon: SIDEBAR_ICONS.chart },
-  { href: "/jobs/new", label: "Post a Job", icon: SIDEBAR_ICONS.jobs },
-  { href: "/profile", label: "Company Profile", icon: SIDEBAR_ICONS.company },
+  { href: "/dashboard/employer", label: "Overview", icon: LayoutDashboard },
+  { href: "/dashboard/employer/applications", label: "Applications", icon: FileText },
+  { href: "/dashboard/employer/analytics", label: "Analytics", icon: ChartBar },
+  { href: "/jobs/new", label: "Post a Job", icon: Briefcase },
+  { href: "/profile", label: "Company Profile", icon: Building2 },
 ];
+
+function getPageTitle(pathname: string): string {
+  if (pathname === "/dashboard/employer") return "Overview";
+  if (pathname.startsWith("/dashboard/employer/applications")) return pathname === "/dashboard/employer/applications" ? "Applications" : "Application Detail";
+  if (pathname.startsWith("/dashboard/employer/analytics")) return "Analytics";
+  return "Dashboard";
+}
 
 export default function EmployerDashboardLayout({
   children,
 }: {
   children: ReactNode;
 }) {
-  const { isSignedIn, orgSlug } = useAuth();
+  const { isSignedIn } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!isSignedIn) {
-      router.push("/");
-    }
+    if (!isSignedIn) router.push("/");
   }, [isSignedIn, router]);
 
   if (!isSignedIn) return null;
 
+  const pageTitle = getPageTitle(pathname);
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-10 bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <Link href="/" className="text-2xl font-bold text-blue-600">
+    <SidebarProvider>
+      <Sidebar collapsible="icon" className="border-r border-sidebar-border">
+        <SidebarHeader className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 p-0">
+          <Link
+            href="/"
+            className="flex items-center gap-3 px-4 py-4 text-white group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2"
+          >
+            <div className="flex size-8 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm">
+              <Briefcase className="size-4 text-white" />
+            </div>
+            <span className="font-semibold text-sm tracking-tight group-data-[collapsible=icon]:hidden">
               Job Reels
-            </Link>
-            <div className="flex items-center gap-4">
-              <Link
-                href="/jobs"
-                className="text-sm text-gray-600 hover:text-gray-900 hidden sm:block"
-              >
-                Browse Jobs
-              </Link>
-              {orgSlug && (
-                <Link
-                  href={`/orgs/${orgSlug}/dashboard`}
-                  className="text-sm text-blue-600 hover:text-blue-800 hidden sm:block"
-                >
-                  Org Dashboard
-                </Link>
-              )}
-              <UserButton afterSignOutUrl="/" />
+            </span>
+          </Link>
+        </SidebarHeader>
+
+        <SidebarContent className="px-2 py-3">
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {NAV_ITEMS.map((item) => {
+                  const Icon = item.icon;
+                  const isActive =
+                    pathname === item.href ||
+                    pathname.startsWith(item.href + "/");
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        isActive={isActive}
+                        tooltip={item.label}
+                        render={<Link href={item.href} />}
+                        className={`text-sm ${isActive ? "font-medium" : "text-sidebar-foreground/70"}`}
+                      >
+                        <Icon className="size-4 shrink-0" />
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+
+        <SidebarFooter className="border-t border-sidebar-border p-3">
+          <div className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
+            <UserButton
+              afterSignOutUrl="/"
+              appearance={{ elements: { avatarBox: "size-7" } }}
+            />
+            <div className="flex flex-col group-data-[collapsible=icon]:hidden min-w-0">
+              <span className="text-xs font-medium truncate text-sidebar-foreground">
+                Account
+              </span>
+              <span className="text-[10px] text-sidebar-foreground/50 truncate">
+                Employer
+              </span>
             </div>
           </div>
-        </div>
-      </header>
+        </SidebarFooter>
+      </Sidebar>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex gap-8">
-          <aside className="hidden md:block w-56 shrink-0">
-            <Sidebar items={NAV_ITEMS} />
-          </aside>
-          <main className="flex-1 min-w-0">{children}</main>
-        </div>
-      </div>
-
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex z-10">
-        {NAV_ITEMS.map((item) => {
-          const isActive =
-            pathname === item.href || pathname.startsWith(item.href + "/");
-          return (
+      <SidebarInset>
+        <header className="sticky top-0 z-20 flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
+          <SidebarTrigger className="size-8 text-muted-foreground hover:text-foreground" />
+          <div className="hidden sm:flex items-center gap-1.5 text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">{pageTitle}</span>
+          </div>
+          <div className="flex-1" />
+          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 border border-border/50 text-muted-foreground text-sm min-w-[200px]">
+            <Search className="size-3.5" />
+            <span className="text-xs">Search jobs...</span>
+          </div>
+          <button
+            type="button"
+            className="relative size-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors text-muted-foreground"
+          >
+            <Bell className="size-4" />
+            <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-blue-600 animate-pulse-glow" />
+          </button>
+          <div className="flex items-center gap-3 pl-2 border-l border-border">
             <Link
-              key={item.href}
-              href={item.href}
-              className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${
-                isActive
-                  ? "text-blue-700 border-t-2 border-blue-600"
-                  : "text-gray-500"
-              }`}
+              href="/jobs"
+              className="hidden lg:flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                dangerouslySetInnerHTML={{ __html: item.icon }}
-              />
-              {item.label}
+              Browse Jobs
+              <ArrowUpRight className="size-3" />
             </Link>
-          );
-        })}
-      </nav>
-    </div>
+            <UserButton
+              afterSignOutUrl="/"
+              appearance={{ elements: { avatarBox: "size-7" } }}
+            />
+          </div>
+        </header>
+        <main className="flex-1 p-4 md:p-6 lg:p-8">{children}</main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

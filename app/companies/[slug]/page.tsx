@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { JobCard } from "@/components/JobCard";
-import { Skeleton } from "@/components/ui/Skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/Badge";
 
 export default function CompanyPage() {
