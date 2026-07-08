@@ -11,6 +11,7 @@ import { SearchBar } from "@/components/SearchBar";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { SalarySlider } from "@/components/SalarySlider";
 
 export default function JobsPage() {
   const searchParams = useSearchParams();
@@ -19,14 +20,26 @@ export default function JobsPage() {
 
   const categories = useQuery(api.categories.listCategories);
 
-  const [employmentType, setEmploymentType] = useState("");
-  const [locationType, setLocationType] = useState("");
+  const [employmentType, setEmploymentType] = useState<
+    "full-time" | "part-time" | "contract" | "temporary" | "internship" | ""
+  >("");
+  const [locationType, setLocationType] = useState<
+    "on-site" | "remote" | "hybrid" | ""
+  >("");
   const [category, setCategory] = useState(initialCategory);
+  const [salaryMin, setSalaryMin] = useState<number | undefined>(undefined);
+  const [salaryMax, setSalaryMax] = useState<number | undefined>(undefined);
   const [query, setQuery] = useState(initialQuery);
 
   const { results, status, loadMore } = usePaginatedQuery(
     api.jobs.listJobs,
-    {},
+    {
+      employmentType: employmentType || undefined,
+      locationType: locationType || undefined,
+      category: category || undefined,
+      salaryMin,
+      salaryMax,
+    },
     { initialNumItems: 12 },
   );
 
@@ -77,7 +90,17 @@ export default function JobsPage() {
                           name="employmentType"
                           value={opt.value}
                           checked={employmentType === opt.value}
-                          onChange={(e) => setEmploymentType(e.target.value)}
+                          onChange={(e) =>
+                            setEmploymentType(
+                              e.target.value as
+                                | "full-time"
+                                | "part-time"
+                                | "contract"
+                                | "temporary"
+                                | "internship"
+                                | "",
+                            )
+                          }
                           className="text-blue-600"
                         />
                         <span className="text-sm text-gray-700">
@@ -108,7 +131,15 @@ export default function JobsPage() {
                           name="locationType"
                           value={opt.value}
                           checked={locationType === opt.value}
-                          onChange={(e) => setLocationType(e.target.value)}
+                          onChange={(e) =>
+                            setLocationType(
+                              e.target.value as
+                                | "on-site"
+                                | "remote"
+                                | "hybrid"
+                                | "",
+                            )
+                          }
                           className="text-blue-600"
                         />
                         <span className="text-sm text-gray-700">
@@ -157,11 +188,19 @@ export default function JobsPage() {
                     </div>
                   </div>
                 )}
+                <SalarySlider
+                  salaryMin={salaryMin}
+                  salaryMax={salaryMax}
+                  onChange={(min, max) => {
+                    setSalaryMin(min);
+                    setSalaryMax(max);
+                  }}
+                />
               </div>
             </aside>
 
             <div className="flex-1 min-w-0">
-              {(employmentType || locationType || category) && (
+              {(employmentType || locationType || category || salaryMin) && (
                 <div className="flex flex-wrap gap-2 mb-4">
                   {employmentType && (
                     <Badge variant="info">
@@ -190,6 +229,17 @@ export default function JobsPage() {
                       {category}
                       <button
                         onClick={() => setCategory("")}
+                        className="ml-1.5 hover:text-blue-800"
+                      >
+                        &times;
+                      </button>
+                    </Badge>
+                  )}
+                  {salaryMin && (
+                    <Badge variant="info">
+                      ${salaryMin.toLocaleString()}+
+                      <button
+                        onClick={() => { setSalaryMin(undefined); setSalaryMax(undefined); }}
                         className="ml-1.5 hover:text-blue-800"
                       >
                         &times;

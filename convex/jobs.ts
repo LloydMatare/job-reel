@@ -26,6 +26,7 @@ export const listJobs = query({
     ),
     category: v.optional(v.string()),
     salaryMin: v.optional(v.number()),
+    salaryMax: v.optional(v.number()),
     location: v.optional(v.string()),
     skills: v.optional(v.array(v.string())),
   },
@@ -42,7 +43,33 @@ export const listJobs = query({
         );
     }
 
-    return await queryBuilder.order("desc").paginate(args.paginationOpts);
+    let results = await queryBuilder.order("desc").paginate(args.paginationOpts);
+
+    if (args.employmentType) {
+      results.page = results.page.filter(
+        (j) => j.employmentType === args.employmentType,
+      );
+    }
+
+    if (args.locationType) {
+      results.page = results.page.filter(
+        (j) => j.locationType === args.locationType,
+      );
+    }
+
+    if (args.salaryMin !== undefined) {
+      results.page = results.page.filter(
+        (j) => (j.salaryMax ?? Infinity) >= args.salaryMin!,
+      );
+    }
+
+    if (args.salaryMax !== undefined) {
+      results.page = results.page.filter(
+        (j) => (j.salaryMin ?? 0) <= args.salaryMax!,
+      );
+    }
+
+    return results;
   },
 });
 
@@ -337,5 +364,63 @@ export const getEmployerJobs = query({
       .withIndex("by_company", (q) => q.eq("companyId", company._id))
       .order("desc")
       .take(100);
+  },
+});
+
+export const getRecommendedJobs = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token_identifier", (q: any) =>
+        q.eq("tokenIdentifier", identity.tokenIdentifier),
+      )
+      .unique();
+    if (!user || user.role !== "seeker") return [];
+
+    const applications = await ctx.db
+      .query("applications")
+      .withIndex("by_user", (q: any) => q.eq("userId", user._id))
+      .order("desc")
+      .take(20);
+
+    const saved = await ctx.db
+      .query("saved_jobs")
+      .withIndex("by_user", (q: any) => q.eq("userId", user._id))
+      .collect();
+
+    const jobIds = [
+      ...new Set([
+        ...applications.map((a) => a.jobId),
+        ...saved.map((s) => s.jobId),
+      ]),
+    ];
+    if (jobIds.length === 0) return [];
+
+    const userJobs = (await Promise.all(jobIds.map((id) => ctx.db.get(id)))).filter(Boolean) as any[];
+    const categories = [...new Set(userJobs.filter((j: any) => j.category).map((j: any) => j.category))];
+    if (categories.length === 0) return [];
+
+    const recommended = await ctx.db
+      .query("jobs")
+      .withIndex("by_status", (q: any) => q.eq("status", "active"))
+      .order("desc")
+      .take(50);
+
+    const filtered = recommended
+      .filter((j: any) => j.category && categories.includes(j.category))
+      .slice(0, 6);
+
+    const withCompanies = await Promise.all(
+      filtered.map(async (job: any) => {
+        const company = await ctx.db.get("companies", job.companyId);
+        return { ...job, company };
+      }),
+    );
+
+    return withCompanies;
   },
 });

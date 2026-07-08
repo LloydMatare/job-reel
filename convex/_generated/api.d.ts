@@ -8,13 +8,24 @@
  * @module
  */
 
+import type * as admin from "../admin.js";
+import type * as ai from "../ai.js";
 import type * as applications from "../applications.js";
 import type * as billing from "../billing.js";
+import type * as career_chat from "../career_chat.js";
+import type * as career_chat_helpers from "../career_chat_helpers.js";
+import type * as career_chat_send from "../career_chat_send.js";
 import type * as categories from "../categories.js";
 import type * as companies from "../companies.js";
+import type * as cover_letters from "../cover_letters.js";
+import type * as crons from "../crons.js";
 import type * as http from "../http.js";
+import type * as job_alerts from "../job_alerts.js";
+import type * as job_alerts_cron from "../job_alerts_cron.js";
 import type * as jobs from "../jobs.js";
 import type * as myFunctions from "../myFunctions.js";
+import type * as notifications from "../notifications.js";
+import type * as resumes from "../resumes.js";
 import type * as saved_jobs from "../saved_jobs.js";
 import type * as users from "../users.js";
 
@@ -25,13 +36,24 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  admin: typeof admin;
+  ai: typeof ai;
   applications: typeof applications;
   billing: typeof billing;
+  career_chat: typeof career_chat;
+  career_chat_helpers: typeof career_chat_helpers;
+  career_chat_send: typeof career_chat_send;
   categories: typeof categories;
   companies: typeof companies;
+  cover_letters: typeof cover_letters;
+  crons: typeof crons;
   http: typeof http;
+  job_alerts: typeof job_alerts;
+  job_alerts_cron: typeof job_alerts_cron;
   jobs: typeof jobs;
   myFunctions: typeof myFunctions;
+  notifications: typeof notifications;
+  resumes: typeof resumes;
   saved_jobs: typeof saved_jobs;
   users: typeof users;
 }>;

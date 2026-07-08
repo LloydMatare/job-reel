@@ -100,6 +100,7 @@ export default function JobDetailPage() {
                 <div className="text-sm text-gray-500 space-y-1 mb-6">
                   <p>{job.location}</p>
                   {salary && <p className="font-medium text-gray-900">{salary}</p>}
+                  <p className="text-gray-400">{job.applicationCount ?? 0} applicant{(job.applicationCount ?? 0) !== 1 ? "s" : ""}</p>
                 </div>
 
                 {job.skills && job.skills.length > 0 && (
@@ -163,6 +164,7 @@ export default function JobDetailPage() {
                         router.push("/role-select");
                         return;
                       }
+                      router.push(`/jobs/${jobId}/apply`);
                     }}
                   >
                     Apply Now

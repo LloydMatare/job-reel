@@ -7,7 +7,7 @@ export default defineSchema({
     name: v.string(),
     email: v.string(),
     avatarUrl: v.optional(v.string()),
-    role: v.union(v.literal("seeker"), v.literal("employer")),
+    role: v.union(v.literal("seeker"), v.literal("employer"), v.literal("admin")),
     phone: v.optional(v.string()),
     location: v.optional(v.string()),
     bio: v.optional(v.string()),
@@ -104,6 +104,66 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_user_and_job", ["userId", "jobId"]),
+
+  job_alerts: defineTable({
+    userId: v.id("users"),
+    keywords: v.optional(v.string()),
+    category: v.optional(v.string()),
+    location: v.optional(v.string()),
+    employmentType: v.optional(
+      v.union(
+        v.literal("full-time"),
+        v.literal("part-time"),
+        v.literal("contract"),
+        v.literal("temporary"),
+        v.literal("internship"),
+      ),
+    ),
+    salaryMin: v.optional(v.number()),
+    frequency: v.union(v.literal("daily"), v.literal("weekly")),
+    lastSent: v.optional(v.number()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_frequency", ["frequency"]),
+
+  resumes: defineTable({
+    userId: v.id("users"),
+    title: v.string(),
+    sections: v.object({
+      summary: v.optional(v.string()),
+      experience: v.array(
+        v.object({
+          company: v.string(),
+          role: v.string(),
+          startDate: v.string(),
+          endDate: v.optional(v.string()),
+          description: v.string(),
+        }),
+      ),
+      education: v.array(
+        v.object({
+          institution: v.string(),
+          degree: v.string(),
+          field: v.string(),
+          year: v.string(),
+        }),
+      ),
+      skills: v.array(v.string()),
+    }),
+  }).index("by_user", ["userId"]),
+
+  cover_letters: defineTable({
+    userId: v.id("users"),
+    jobId: v.optional(v.id("jobs")),
+    resumeId: v.optional(v.id("resumes")),
+    content: v.string(),
+  }).index("by_user", ["userId"]),
+
+  career_chat_messages: defineTable({
+    userId: v.id("users"),
+    role: v.union(v.literal("user"), v.literal("assistant")),
+    content: v.string(),
+  }).index("by_user", ["userId"]),
 
   categories: defineTable({
     name: v.string(),

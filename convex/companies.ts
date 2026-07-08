@@ -115,8 +115,9 @@ export const createOrgCompany = mutation({
       .unique();
 
     if (!user) throw new Error("User not found");
-    if (user.role !== "employer")
-      throw new Error("Only employers can create companies");
+    if (user.role !== "employer" || !user.onboarded) {
+      await ctx.db.patch(user._id, { role: "employer", onboarded: true });
+    }
 
     const existing = await ctx.db
       .query("companies")

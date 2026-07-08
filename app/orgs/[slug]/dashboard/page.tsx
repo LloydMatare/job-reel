@@ -142,7 +142,7 @@ export default function OrgDashboardPage() {
                     </td>
                     <td className="px-5 py-4">
                       <Link
-                        href={`/orgs/${params.slug}/jobs/${job._id}/applications`}
+                        href={`/dashboard/employer/applications?jobId=${job._id}`}
                         className="text-blue-600 hover:text-blue-800 text-xs font-medium"
                       >
                         {job.applicationCount ?? 0}

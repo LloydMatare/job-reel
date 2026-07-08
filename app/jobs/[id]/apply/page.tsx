@@ -16,8 +16,9 @@ export default function ApplyPage() {
 
   const job = useQuery(api.jobs.getJob, { jobId: jobId as any });
   const currentUser = useQuery(api.users.getMe);
-  const apply = useMutation(api.applications.apply);
+  const applyToJob = useMutation(api.applications.applyToJob);
   const ensureUser = useMutation(api.users.ensureUser);
+  const generateUploadUrl = useMutation(api.applications.generateUploadUrl);
 
   const [coverLetter, setCoverLetter] = useState("");
   const [resumeFile, setResumeFile] = useState<File | null>(null);
@@ -86,7 +87,7 @@ export default function ApplyPage() {
           </p>
           <div className="flex gap-3 justify-center">
             <button
-              onClick={() => router.push("/my-applications")}
+              onClick={() => router.push("/dashboard/seeker/applications")}
               className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 font-medium"
             >
               View My Applications
@@ -116,15 +117,20 @@ export default function ApplyPage() {
 
       if (resumeFile) {
         setUploading(true);
-        const uploadUrl = await fetch("/api/upload", { method: "POST" }).then(
-          (r) => r.json(),
-        );
-        // TODO: replace with proper Convex file upload
-        // For now, store the file name as a placeholder
+        const uploadUrl = await generateUploadUrl();
+        const formData = new FormData();
+        formData.append("file", resumeFile);
+        const response = await fetch(uploadUrl, {
+          method: "POST",
+          body: formData,
+        });
+        if (!response.ok) throw new Error("Failed to upload resume");
+        const { storageId } = (await response.json()) as { storageId: string };
+        resumeStorageId = storageId as any;
         setUploading(false);
       }
 
-      await apply({
+      await applyToJob({
         jobId: jobId as any,
         coverLetter: coverLetter.trim() || undefined,
         resumeStorageId,

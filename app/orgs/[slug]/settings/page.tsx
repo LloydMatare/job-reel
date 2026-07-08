@@ -7,6 +7,7 @@ export default function OrgSettingsPage() {
     <div>
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Settings</h1>
       <OrganizationProfile
+        routing="hash"
         appearance={{
           elements: {
             rootBox: "w-full",

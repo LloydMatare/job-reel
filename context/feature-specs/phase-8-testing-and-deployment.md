@@ -1,4 +1,4 @@
-# Phase 7 — Testing & Deployment
+# Phase 8 — Testing & Deployment
 
 **Goal:** Ensure reliability with tests and ship to production.
 

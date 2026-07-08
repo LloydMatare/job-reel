@@ -40,7 +40,20 @@ export const saveJob = mutation({
       )
       .unique();
 
-    if (!user) throw new Error("User not found");
+    if (!user) {
+      const id = await ctx.db.insert("users", {
+        tokenIdentifier: identity.tokenIdentifier,
+        name: identity.name ?? identity.email ?? "",
+        email: identity.email ?? identity.tokenIdentifier,
+        avatarUrl: identity.pictureUrl ?? undefined,
+        role: "seeker",
+        onboarded: false,
+      });
+      return ctx.db.insert("saved_jobs", {
+        userId: id,
+        jobId: args.jobId,
+      });
+    }
 
     const existing = await ctx.db
       .query("saved_jobs")

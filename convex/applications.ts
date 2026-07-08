@@ -8,7 +8,7 @@ function getOrgId(
   return typeof id === "string" ? id : undefined;
 }
 
-export const apply = mutation({
+export const applyToJob = mutation({
   args: {
     jobId: v.id("jobs"),
     coverLetter: v.optional(v.string()),
@@ -29,7 +29,8 @@ export const apply = mutation({
 
     const job = await ctx.db.get("jobs", args.jobId);
     if (!job) throw new Error("Job not found");
-    if (job.status !== "active") throw new Error("This job is no longer accepting applications");
+    if (job.status !== "active")
+      throw new Error("This job is no longer accepting applications");
 
     const existing = await ctx.db
       .query("applications")
@@ -51,6 +52,39 @@ export const apply = mutation({
     await ctx.db.patch(args.jobId, {
       applicationCount: (job.applicationCount ?? 0) + 1,
     });
+  },
+});
+
+export const withdrawApplication = mutation({
+  args: { applicationId: v.id("applications") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token_identifier", (q) =>
+        q.eq("tokenIdentifier", identity.tokenIdentifier),
+      )
+      .unique();
+
+    if (!user) throw new Error("User not found");
+
+    const app = await ctx.db.get("applications", args.applicationId);
+    if (!app) throw new Error("Application not found");
+    if (app.userId !== user._id) throw new Error("Not authorized");
+    if (app.status !== "pending")
+      throw new Error("Can only withdraw pending applications");
+
+    const job = await ctx.db.get("jobs", app.jobId);
+
+    await ctx.db.delete("applications", args.applicationId);
+
+    if (job) {
+      await ctx.db.patch(app.jobId, {
+        applicationCount: Math.max(0, (job.applicationCount ?? 1) - 1),
+      });
+    }
   },
 });
 
@@ -82,6 +116,84 @@ export const getJobApplications = query({
         return { ...app, applicant };
       }),
     );
+  },
+});
+
+export const getApplication = query({
+  args: { applicationId: v.id("applications") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const app = await ctx.db.get("applications", args.applicationId);
+    if (!app) return null;
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token_identifier", (q) =>
+        q.eq("tokenIdentifier", identity.tokenIdentifier),
+      )
+      .unique();
+
+    if (!user) return null;
+
+    const job = await ctx.db.get("jobs", app.jobId);
+    if (!job) return null;
+
+    const company = await ctx.db.get("companies", job.companyId);
+
+    const isOwner = user._id === app.userId;
+    const isEmployer =
+      company && (await ctx.auth.getUserIdentity()) &&
+      getOrgId(identity as Record<string, unknown>) === company.clerkOrgId;
+
+    if (!isOwner && !isEmployer) throw new Error("Not authorized");
+
+    const applicant = await ctx.db.get("users", app.userId);
+
+    return {
+      ...app,
+      applicant,
+      job: { ...job, company },
+    };
+  },
+});
+
+export const getApplicationStats = query({
+  args: { jobId: v.id("jobs") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const orgId = getOrgId(identity as Record<string, unknown>);
+    if (!orgId) throw new Error("No organization selected");
+
+    const job = await ctx.db.get("jobs", args.jobId);
+    if (!job) throw new Error("Job not found");
+
+    const company = await ctx.db.get("companies", job.companyId);
+    if (!company || company.clerkOrgId !== orgId)
+      throw new Error("Not authorized");
+
+    const applications = await ctx.db
+      .query("applications")
+      .withIndex("by_job", (q) => q.eq("jobId", args.jobId))
+      .collect();
+
+    const stats: Record<string, number> = {
+      total: applications.length,
+      pending: 0,
+      reviewing: 0,
+      shortlisted: 0,
+      rejected: 0,
+      hired: 0,
+    };
+
+    for (const app of applications) {
+      stats[app.status] = (stats[app.status] ?? 0) + 1;
+    }
+
+    return stats;
   },
 });
 
@@ -147,6 +259,10 @@ export const updateApplicationStatus = mutation({
 
     await ctx.db.patch(args.applicationId, { status: args.status });
   },
+});
+
+export const generateUploadUrl = mutation(async (ctx) => {
+  return await ctx.storage.generateUploadUrl();
 });
 
 export const addEmployerNotes = mutation({
