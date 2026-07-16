@@ -273,6 +273,8 @@ export const updateApplicationStatus = mutation({
 });
 
 export const generateUploadUrl = mutation(async (ctx) => {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) throw new Error("Not authenticated");
   return await ctx.storage.generateUploadUrl();
 });
 
@@ -297,6 +299,8 @@ export const addEmployerNotes = mutation({
     const company = await ctx.db.get("companies", job.companyId);
     if (!company || company.clerkOrgId !== orgId)
       throw new Error("Not authorized");
+
+    await requireRecruiterOrAbove(ctx, company._id);
 
     await ctx.db.patch(args.applicationId, { employerNotes: args.notes });
   },

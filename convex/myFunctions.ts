@@ -1,7 +1,7 @@
-import { mutation } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 
-export const seedCategories = mutation({
+export const seedCategories = internalMutation({
   args: {},
   handler: async (ctx) => {
     const existing = await ctx.db.query("categories").take(1);

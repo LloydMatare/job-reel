@@ -10,13 +10,13 @@
 │  Phase 1 — Database Schema           ▓▓▓▓▓▓▓▓▓▓ 100%  │
 │  Phase 2 — Auth & Profiles           ▓▓▓▓▓▓▓▓▓▓ 100%  │
 │  Phase 3 — Clerk Orgs Integration    ▓▓▓▓▓▓▓▓▓▓ 100%  │
-│  Phase 4 — Clerk Billing              ▓▓▓▓▓▓▓▓▓▓ 100%  │
+│  Phase 4 — Clerk Billing             ▓▓▓▓▓▓▓▓▓▓ 100%  │
 │  Phase 5 — Landing Page              ▓▓▓▓▓▓▓▓▓▓ 100%  │
-│  Phase 6 — Job Postings CRUD         ░░░░░░░░░░░░   0%  │
-│  Phase 7 — Application System        ░░░░░░░░░░░░   0%  │
-│  Phase 8 — UI/UX & Dashboards        ░░░░░░░░░░░░   0%  │
-│  Phase 9 — Advanced Features         ░░░░░░░░░░░░   0%  │
-│  Phase 10 — Testing & Deploy         ░░░░░░░░░░░░   0%  │
+│  Phase 6 — Job Postings CRUD         ▓▓▓▓▓▓▓▓▓▓ 100%  │
+│  Phase 7 — Application System        ▓▓▓▓▓▓▓▓▓▓ 100%  │
+│  Phase 8 — UI/UX & Dashboards        ▓▓▓▓▓▓▓▓▓▓ 100%  │
+│  Phase 9 — Advanced Features         ▓▓▓▓▓▓▓▓▓▓ 100%  │
+│  Phase 10 — Testing & Deploy         ▓▓▓▓▓▓▓▓▓▓ 100%  │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -30,11 +30,11 @@
 | 3 — Clerk Orgs Integration | ✅ Complete | 2026-07-07 |
 | 4 — Clerk Billing | ✅ Complete | 2026-07-07 |
 | 5 — Landing Page | ✅ Complete | 2026-07-07 |
-| 6 — Job Postings CRUD | ⬜ Not Started | — |
-| 7 — Application System | ⬜ Not Started | — |
-| 8 — UI/UX & Dashboards | ⬜ Not Started | — |
-| 9 — Advanced Features | ⬜ Not Started | — |
-| 10 — Testing & Deploy | ⬜ Not Started | — |
+| 6 — Job Postings CRUD | ✅ Complete | 2026-07-08 |
+| 7 — Application System | ✅ Complete | 2026-07-08 |
+| 8 — UI/UX & Dashboards | ✅ Complete | 2026-07-16 |
+| 9 — Advanced Features | ✅ Complete | 2026-07-16 |
+| 10 — Testing & Deploy | ✅ Complete | 2026-07-16 |
 
 ## What Was Done
 
@@ -89,7 +89,7 @@
 - `app/orgs/[slug]/billing/page.tsx`: billing dashboard with current plan card, usage stats, plan comparison grid (Free/Pro/Enterprise), upgrade CTAs
 
 ### Phase 5 — Landing Page
-- `components/Header.tsx`: global nav with Logo, Find Jobs, role-aware Dashboard link, auth buttons (Sign In / Sign Up / UserButton)
+- `components/Header.tsx`: global nav with Logo, Find Jobs, Insights link, role-aware Dashboard link, auth buttons (Sign In / Sign Up / UserButton)
 - `components/Footer.tsx`: 4-column footer with links for seekers, employers, company info
 - `components/JobCard.tsx`: job listing card with company avatar, title, badges (location type, employment type, category), salary range, skills, posted date
 - `components/SearchBar.tsx`: search input with category dropdown and search button, form submits to `/jobs?q=&category=`
@@ -101,6 +101,97 @@
 - `convex/jobs.ts`: `listJobs`, `searchJobs` (full-text), `getJob`, `getFeaturedJobs`, `getJobsByCompany` (public queries), `createJob`, `updateJob`, `closeJob`, `reopenJob`, `deleteJob`, `getEmployerJobs` (employer mutations)
 - `app/page.tsx`: full landing page with Hero (gradient + search), Featured Jobs (real data from Convex, with skeleton/empty states), How It Works (seekers + employers), Browse by Category grid, CTA section
 
+### Phase 6 — Job Postings CRUD
+- `app/jobs/page.tsx`: Full search page with pagination, filters (employment type, location type, category, salary slider), Create Alert button
+- `app/jobs/[id]/page.tsx`: Job detail page with apply button, company info, save job toggle
+- `app/jobs/new/page.tsx`: Job creation form for employers
+- `app/jobs/[id]/edit/page.tsx`: Job editing form
+- `convex/jobs.ts`: Full CRUD mutations + public queries (list, search, get, featured, by company)
+- `convex/categories.ts`: Category listing queries
+
+### Phase 7 — Application System
+- `app/jobs/[id]/apply/page.tsx`: Application submission form with cover letter + resume upload
+- `app/dashboard/seeker/applications/page.tsx`: Seeker's application list with withdraw (confirmation modal, supports pending + reviewing statuses)
+- `app/dashboard/seeker/applications/[id]/page.tsx`: Application detail view with timeline, company info, withdraw button
+- `app/dashboard/employer/applications/page.tsx`: Employer application management with status filter tabs
+- `app/dashboard/employer/applications/[id]/page.tsx`: Employer application detail with employer notes
+- `convex/applications.ts`: submitWithFile, withdrawApplication, getMyApplications, getJobApplications, getApplication, updateApplicationStatus, getCompanyAppBreakdown, getCompanyAnalytics
+- `convex/notifications.ts`: notifyNewApplication action (email notification)
+
+### Phase 8 — UI/UX & Dashboards
+- `app/dashboard/seeker/layout.tsx`: Seeker sidebar nav (Overview, Applications, Saved Jobs, Resumes, Cover Letters, Alerts, Career Chat, Profile)
+- `app/dashboard/seeker/page.tsx`: Seeker overview with stats (applications sent, saved jobs, interviews), quick links
+- `app/dashboard/seeker/saved/page.tsx`: Saved jobs with unsave functionality
+- `app/dashboard/seeker/alerts/page.tsx`: Job alert CRUD with keyword, category, frequency settings
+- `app/dashboard/employer/layout.tsx`: Employer sidebar nav (Overview, Applications, Analytics, Post Job, Company Profile)
+- `app/dashboard/employer/page.tsx`: Employer overview with pipeline stats, job listings
+- `app/dashboard/employer/analytics/page.tsx`: Employer analytics with status breakdown chart, 30-day time series, per-job distribution
+- `app/companies/page.tsx`: Public company directory with search
+- `app/companies/[slug]/page.tsx`: Public company detail with job listings
+- Components: StatusBadge, ApplicationCard, OnboardingBanner, SalarySlider
+
+### Phase 9 — Advanced Features
+- **AI Resume Builder**: `convex/ai.ts` (OpenAI GPT-4o actions), `convex/resumes.ts` (CRUD), `app/dashboard/seeker/resumes/` (list, create step-by-step, edit)
+- **AI Cover Letter Generator**: `convex/cover_letters.ts` (CRUD + AI generation), `app/dashboard/seeker/cover-letters/` (list, create with job+resume selection)
+- **Career Guidance Chat**: `convex/career_chat.ts` (send message action, history query, clear), `app/dashboard/seeker/career-guidance/page.tsx` (chat UI with suggested prompts)
+- **Roles & Permissions**: `convex/permissions.ts` (checkRole, requireRole utilities), `convex/company_members.ts` (member CRUD + role management)
+- **Org Member Management**: `app/orgs/[slug]/members/page.tsx` (role-based member list with admin controls)
+- **Billing**: `convex/billing.ts` (plan limits, usage checks), `app/orgs/[slug]/billing/page.tsx` (plan comparison, upgrade)
+- **Admin Dashboard**: `app/admin/` (overview stats, user management, job management, company management)
+- **Job Market Insights**: `convex/insights.ts` (market aggregation), `app/(main)/insights/page.tsx` (public insights page)
+- **Job Alerts Cron**: `convex/job_alerts_cron.ts`, `convex/crons.ts` (scheduled daily/weekly alerts)
+- **Convex Component**: Agent-based setup with permissions component
+
+### Phase 10 — Testing & Deploy
+- `vitest.config.ts`: Configured with edge-runtime environment for Convex testing
+- `playwright.config.ts`: Configured with chromium, dev server auto-start, HTML reporter
+- `package.json`: Added scripts (`test`, `test:watch`, `test:e2e`, `test:e2e:ui`, `test:all`, `typecheck`, `check`)
+- `convex/users.test.ts`: User profile creation, updates, role assignment tests
+- `convex/jobs.test.ts`: Job CRUD, status transitions, filtering, application count tracking tests
+- `convex/applications.test.ts`: Submit, duplicate prevention, status transitions, withdraw, job association tests
+- `convex/saved_jobs.test.ts`: Save/unsave, retrieve saved jobs tests
+- `convex/admin.test.ts`: Role-based access, company queries, site statistics tests
+- `e2e/homepage.spec.ts`: Homepage smoke tests (hero, nav, navigation)
+- `e2e/flows.spec.ts`: Auth visibility, seeker/employer flow skeletons
+- `e2e/protected-routes.spec.ts`: Auth redirect verification for protected routes
+- `.gitignore`: Added `/test-results`, `/playwright-report`
+- **Security audit + fixes applied:**
+  - `generateUploadUrl`: Added auth check (was unauthenticated)
+  - `updateLastSent`: Added auth + ownership check (was unauthenticated)
+  - `addEmployerNotes`: Added `requireRecruiterOrAbove` RBAC (was missing role check)
+  - `seedCategories`: Converted to `internalMutation` (was public mutation)
+  - Webhook secret validated server-side (defense-in-depth, not passed as visible arg)
+- **Remaining:** Set up GitHub secrets (`CONVEX_DEPLOY_KEY`, `CONVEX_ADMIN_KEY`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, `PLAYWRIGHT_BASE_URL`), install Playwright browsers (`npx playwright install`)
+
+### Required GitHub Secrets (for CI/CD)
+| Secret | Description |
+|---|---|
+| `CONVEX_DEPLOY_KEY` | Convex Dashboard → Settings → Deploy Keys |
+| `CONVEX_ADMIN_KEY` | Convex Dashboard → Settings → Admin Keys |
+| `NEXT_PUBLIC_CONVEX_URL` | Your Convex production URL |
+| `PLAYWRIGHT_BASE_URL` | Staging/Production URL for E2E tests |
+| `VERCEL_TOKEN` | Vercel Dashboard → Account Settings → Tokens |
+| `VERCEL_ORG_ID` | Vercel Dashboard → Team Settings → General (Team ID) |
+| `VERCEL_PROJECT_ID` | Vercel Dashboard → Project → Settings → General |
+
+Set each one: `gh secret set <NAME>`
+
+### Scripts
+| Command | Purpose |
+|---|---|
+| `npm run typecheck` | TypeScript check |
+| `npm run lint` | ESLint |
+| `npm run test` | Unit tests (vitest) |
+| `npm run test:e2e` | Playwright E2E tests |
+| `npm run check` | typecheck + lint + test |
+| `npm run convex:deploy` | Deploy to Convex production |
+| `scripts/validate-secrets.sh` | Verify all GitHub secrets are set |
+
+### Remaining (ops, not code)
+- Set all 7 GitHub secrets above
+- Run `npx playwright install --with-deps chromium` on CI (handled by workflow)
+- Verify deployments after first push to `main`
+
 ## Detailed Specs
 
 - [Phase 0 — Foundation Setup](context/feature-specs/phase-0-foundation-setup.md)
@@ -110,5 +201,6 @@
 - [Phase 4 — Application System](context/feature-specs/phase-4-application-system.md)
 - [Phase 5 — UI/UX & Dashboards](context/feature-specs/phase-5-ui-ux-and-dashboards.md)
 - [Phase 6 — Advanced Features](context/feature-specs/phase-6-advanced-features.md)
-- [Phase 7 — Testing & Deploy](context/feature-specs/phase-7-testing-and-deployment.md)
+- [Phase 7 — AI Career Tools](context/feature-specs/phase-7-ai-career-tools.md)
+- [Phase 8 — Testing & Deployment](context/feature-specs/phase-8-testing-and-deployment.md)
 - [Landing Page Plan](context/landing-specs/landing-page-plan.md)

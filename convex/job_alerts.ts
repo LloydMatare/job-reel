@@ -79,6 +79,21 @@ export const getAlertsByFrequency = query({
 export const updateLastSent = mutation({
   args: { alertId: v.id("job_alerts"), lastSent: v.number() },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_token_identifier", (q) =>
+        q.eq("tokenIdentifier", identity.tokenIdentifier),
+      )
+      .unique();
+    if (!user) throw new Error("User not found");
+
+    const alert = await ctx.db.get(args.alertId);
+    if (!alert) throw new Error("Alert not found");
+    if (alert.userId !== user._id) throw new Error("Not authorized");
+
     await ctx.db.patch(args.alertId, { lastSent: args.lastSent });
   },
 });
