@@ -5,6 +5,7 @@ import { api } from "@/convex/_generated/api";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { OnboardingBanner } from "@/components/OnboardingBanner";
 import {
   Briefcase,
   FileText,
@@ -21,6 +22,7 @@ import {
 export default function EmployerOverviewPage() {
   const { orgSlug } = useAuth();
   const router = useRouter();
+  const currentUser = useQuery(api.users.getMe);
   const company = useQuery(api.companies.getMyCompany);
   const jobs = useQuery(api.jobs.getEmployerJobs);
 
@@ -107,6 +109,9 @@ export default function EmployerOverviewPage() {
 
   return (
     <div className="space-y-8">
+      {currentUser && !currentUser.onboarded && (
+        <OnboardingBanner type="employer" />
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground tracking-tight">

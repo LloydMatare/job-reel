@@ -47,8 +47,9 @@ const PLAN_PRICES: Record<Plan, string> = {
 
 export default function BillingPage() {
   const planInfo = useQuery(api.billing.getOrgPlan);
+  const myRole = useQuery(api.permissions.getMyCompanyRole);
 
-  if (planInfo === undefined) {
+  if (planInfo === undefined || myRole === undefined) {
     return (
       <div className="space-y-6">
         <div className="h-8 w-48 bg-muted rounded-lg animate-pulse" />
@@ -56,6 +57,17 @@ export default function BillingPage() {
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-64 bg-muted rounded-xl animate-pulse" />
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (myRole !== "admin") {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold text-foreground tracking-tight">Billing</h1>
+        <div className="bg-card border border-border rounded-xl p-8 text-center">
+          <p className="text-muted-foreground">Only admins can access billing. Contact your organization admin.</p>
         </div>
       </div>
     );

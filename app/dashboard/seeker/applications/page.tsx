@@ -6,7 +6,14 @@ import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { StatusBadge } from "@/components/StatusBadge";
-import { FileText, Send, XCircle, Search, ArrowRight } from "lucide-react";
+import {
+  FileText,
+  Send,
+  XCircle,
+  Search,
+  ArrowRight,
+  AlertTriangle,
+} from "lucide-react";
 
 export default function SeekerApplicationsPage() {
   const { isSignedIn } = useAuth();
@@ -14,6 +21,7 @@ export default function SeekerApplicationsPage() {
   const applications = useQuery(api.applications.getMyApplications);
   const withdraw = useMutation(api.applications.withdrawApplication);
   const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
+  const [confirmWithdraw, setConfirmWithdraw] = useState<string | null>(null);
 
   if (!isSignedIn) {
     router.push("/");
@@ -108,9 +116,9 @@ export default function SeekerApplicationsPage() {
                   </button>
                   <div className="flex flex-col items-end gap-3 shrink-0">
                     <StatusBadge status={app.status} />
-                    {app.status === "pending" && (
+                    {(app.status === "pending" || app.status === "reviewing") && (
                       <button
-                        onClick={() => handleWithdraw(app._id)}
+                        onClick={() => setConfirmWithdraw(app._id)}
                         disabled={withdrawingId === app._id}
                         className="inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700 font-medium disabled:opacity-50 transition-colors"
                       >
@@ -126,6 +134,44 @@ export default function SeekerApplicationsPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Confirm Withdraw Modal */}
+      {confirmWithdraw && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-card border border-border rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="size-10 rounded-xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
+                <AlertTriangle className="size-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground">
+                  Withdraw Application?
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  This action cannot be undone.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                onClick={() => setConfirmWithdraw(null)}
+                className="px-4 py-2 text-sm font-medium rounded-lg bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  handleWithdraw(confirmWithdraw);
+                  setConfirmWithdraw(null);
+                }}
+                className="px-4 py-2 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
+              >
+                Withdraw
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

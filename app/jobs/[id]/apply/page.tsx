@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
@@ -17,6 +17,7 @@ export default function ApplyPage() {
   const job = useQuery(api.jobs.getJob, { jobId: jobId as any });
   const currentUser = useQuery(api.users.getMe);
   const applyToJob = useMutation(api.applications.applyToJob);
+  const sendNotification = useAction(api.notifications.sendApplicationNotification);
   const ensureUser = useMutation(api.users.ensureUser);
   const generateUploadUrl = useMutation(api.applications.generateUploadUrl);
 
@@ -130,11 +131,20 @@ export default function ApplyPage() {
         setUploading(false);
       }
 
-      await applyToJob({
+      const result = await applyToJob({
         jobId: jobId as any,
         coverLetter: coverLetter.trim() || undefined,
         resumeStorageId,
       });
+
+      if (result?.employerEmail) {
+        sendNotification({
+          employerEmail: result.employerEmail,
+          jobTitle: result.jobTitle ?? job.title,
+          applicantName: currentUser?.name ?? "Someone",
+          jobUrl: `${window.location.origin}/dashboard/employer/applications`,
+        });
+      }
 
       setSuccess(true);
     } catch (err) {

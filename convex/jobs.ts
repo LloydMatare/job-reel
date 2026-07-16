@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { paginationOptsValidator } from "convex/server";
+import { requireRecruiterOrAbove } from "./permissions";
 
 function getOrgId(
   identity: Record<string, unknown>,
@@ -188,7 +189,9 @@ export const createJob = mutation({
 
     if (!company) throw new Error("Company not found");
 
-    return await ctx.db.insert("jobs", {
+    await requireRecruiterOrAbove(ctx, company._id);
+
+    const jobId = await ctx.db.insert("jobs", {
       companyId: company._id,
       title: args.title,
       description: args.description,
@@ -205,6 +208,10 @@ export const createJob = mutation({
       status: args.status,
       applicationCount: 0,
     });
+
+    const owner = await ctx.db.get("users", company.ownerId);
+    const employerEmail = owner?.email;
+    return { jobId, employerEmail, jobTitle: args.title };
   },
 });
 
@@ -255,6 +262,8 @@ export const updateJob = mutation({
     if (!company || company.clerkOrgId !== orgId)
       throw new Error("Not authorized");
 
+    await requireRecruiterOrAbove(ctx, company._id);
+
     const patch: Record<string, unknown> = {};
     if (args.title !== undefined) patch.title = args.title;
     if (args.description !== undefined) patch.description = args.description;
@@ -295,6 +304,8 @@ export const closeJob = mutation({
     if (!company || company.clerkOrgId !== orgId)
       throw new Error("Not authorized");
 
+    await requireRecruiterOrAbove(ctx, company._id);
+
     await ctx.db.patch(args.jobId, { status: "closed" });
   },
 });
@@ -315,6 +326,8 @@ export const reopenJob = mutation({
     if (!company || company.clerkOrgId !== orgId)
       throw new Error("Not authorized");
 
+    await requireRecruiterOrAbove(ctx, company._id);
+
     await ctx.db.patch(args.jobId, { status: "active" });
   },
 });
@@ -334,6 +347,8 @@ export const deleteJob = mutation({
     const company = await ctx.db.get("companies", job.companyId);
     if (!company || company.clerkOrgId !== orgId)
       throw new Error("Not authorized");
+
+    await requireRecruiterOrAbove(ctx, company._id);
 
     if (job.status !== "draft") {
       await ctx.db.patch(args.jobId, { status: "closed" });

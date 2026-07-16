@@ -32,13 +32,6 @@ import {
   Bell,
 } from "lucide-react";
 
-const NAV_ITEMS = [
-  { href: "", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/members", label: "Members", icon: Users },
-  { href: "/settings", label: "Settings", icon: Settings },
-  { href: "/billing", label: "Billing", icon: CreditCard },
-];
-
 function getPageTitle(pathname: string, slug: string): string {
   const base = `/orgs/${slug}`;
   if (pathname === base || pathname === base + "/") return "Dashboard";
@@ -55,6 +48,19 @@ export default function OrgLayout({ children }: { children: ReactNode }) {
   const { orgSlug, isLoaded } = useAuth();
   const { organization } = useOrganization();
   const company = useQuery(api.companies.getMyCompany);
+  const myRole = useQuery(api.permissions.getMyCompanyRole);
+
+  const navItems = [
+    { href: "", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/members", label: "Members", icon: Users, minRole: "admin" as const },
+    { href: "/settings", label: "Settings", icon: Settings, minRole: "admin" as const },
+    { href: "/billing", label: "Billing", icon: CreditCard, minRole: "admin" as const },
+  ].filter((item) => {
+    if (!item.minRole) return true;
+    if (!myRole) return false;
+    if (item.minRole === "admin") return myRole === "admin";
+    return true;
+  });
 
   useEffect(() => {
     if (isLoaded && orgSlug && orgSlug !== params.slug) {
@@ -102,7 +108,7 @@ export default function OrgLayout({ children }: { children: ReactNode }) {
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
-                {NAV_ITEMS.map((item) => {
+                {navItems.map((item) => {
                   const Icon = item.icon;
                   const active = isActive(item.href);
                   return (

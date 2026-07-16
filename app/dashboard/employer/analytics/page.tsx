@@ -8,6 +8,11 @@ import {
   Users,
   TrendingUp,
   BarChart3,
+  Clock,
+  Hourglass,
+  UserCheck,
+  XCircle,
+  CheckCircle,
 } from "lucide-react";
 
 export default function EmployerAnalytics() {
@@ -41,8 +46,18 @@ export default function EmployerAnalytics() {
   );
 }
 
+const STATUS_CONFIG: Record<string, { label: string; icon: typeof BarChart3; color: string; bar: string }> = {
+  pending: { label: "Pending", icon: Clock, color: "text-amber-600 bg-amber-50", bar: "bg-amber-500" },
+  reviewing: { label: "Reviewing", icon: Hourglass, color: "text-blue-600 bg-blue-50", bar: "bg-blue-500" },
+  shortlisted: { label: "Shortlisted", icon: UserCheck, color: "text-purple-600 bg-purple-50", bar: "bg-purple-500" },
+  rejected: { label: "Rejected", icon: XCircle, color: "text-red-600 bg-red-50", bar: "bg-red-500" },
+  hired: { label: "Hired", icon: CheckCircle, color: "text-emerald-600 bg-emerald-50", bar: "bg-emerald-500" },
+};
+
 function CompanyAnalytics({ companyId }: { companyId: any }) {
   const jobs = useQuery(api.jobs.getJobsByCompany, { companyId });
+  const analytics = useQuery(api.applications.getCompanyAnalytics);
+
   const allJobs = jobs ?? [];
   const activeJobs = allJobs.filter((j: any) => j.status === "active");
   const closedJobs = allJobs.filter((j: any) => j.status === "closed");
@@ -65,7 +80,7 @@ function CompanyAnalytics({ companyId }: { companyId: any }) {
     },
     {
       label: "Total Applications",
-      value: totalApps,
+      value: analytics?.totalApplications ?? totalApps,
       icon: Users,
       gradient: "from-emerald-500 to-emerald-600",
       bg: "bg-emerald-50",
@@ -89,6 +104,11 @@ function CompanyAnalytics({ companyId }: { companyId: any }) {
     },
   ];
 
+  const breakdown = analytics?.statusBreakdown;
+  const maxStatus = breakdown
+    ? Math.max(...Object.values(breakdown), 1)
+    : 1;
+
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -97,7 +117,7 @@ function CompanyAnalytics({ companyId }: { companyId: any }) {
           return (
             <div
               key={card.label}
-              className="group relative bg-card border border-border rounded-xl p-5 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 animate-slide-up"
+              className="group relative bg-card border border-border rounded-xl p-5 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
               style={{ animationDelay: `${i * 50}ms` }}
             >
               <div className="flex items-center justify-between mb-3">
@@ -119,6 +139,92 @@ function CompanyAnalytics({ companyId }: { companyId: any }) {
         })}
       </div>
 
+      {breakdown && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Status Breakdown */}
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-border flex items-center gap-2">
+              <BarChart3 className="size-4 text-blue-600" />
+              <h2 className="font-semibold text-foreground text-sm">
+                Application Status
+              </h2>
+            </div>
+            <div className="p-6 space-y-4">
+              {Object.entries(STATUS_CONFIG).map(([key, config]) => {
+                const count = breakdown[key] ?? 0;
+                const pct = maxStatus > 0 ? (count / maxStatus) * 100 : 0;
+                const Icon = config.icon;
+                return (
+                  <div key={key}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <div className={`size-6 rounded-md ${config.color} flex items-center justify-center`}>
+                          <Icon className="size-3.5" />
+                        </div>
+                        <span className="text-sm text-foreground">{config.label}</span>
+                      </div>
+                      <span className="text-sm font-medium text-foreground tabular-nums">
+                        {count}
+                      </span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className={`h-full ${config.bar} rounded-full transition-all duration-500`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Applications Over Time */}
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-border flex items-center gap-2">
+              <TrendingUp className="size-4 text-emerald-600" />
+              <h2 className="font-semibold text-foreground text-sm">
+                Applications (Last 30 Days)
+              </h2>
+            </div>
+            <div className="p-6">
+              {analytics.timeSeries && analytics.timeSeries.length > 0 ? (
+                <div className="space-y-1">
+                  {analytics.timeSeries.map((point: { date: string; count: number }) => {
+                    const maxCount = Math.max(...analytics.timeSeries.map((p: { count: number }) => p.count), 1);
+                    const barH = (point.count / maxCount) * 160;
+                    const dayLabel = new Date(point.date).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                    });
+                    return (
+                      <div key={point.date} className="flex items-center gap-3">
+                        <span className="text-[11px] text-muted-foreground w-16 shrink-0 text-right">
+                          {dayLabel}
+                        </span>
+                        <div className="flex-1 h-5 bg-muted rounded-sm overflow-hidden relative">
+                          <div
+                            className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-blue-500 to-blue-400 rounded-sm transition-all duration-500"
+                            style={{ height: `${barH}px`, maxHeight: "100%" }}
+                          />
+                        </div>
+                        <span className="text-xs text-muted-foreground font-medium tabular-nums w-6 text-right">
+                          {point.count}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="py-8 text-center">
+                  <p className="text-sm text-muted-foreground">No applications in the last 30 days.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {allJobs.length > 0 && (
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <div className="px-6 py-4 border-b border-border flex items-center gap-2">
@@ -139,7 +245,7 @@ function CompanyAnalytics({ companyId }: { companyId: any }) {
               return (
                 <div
                   key={j._id}
-                  className="flex items-center gap-4 px-6 py-4 hover:bg-muted/50 transition-colors animate-slide-up"
+                  className="flex items-center gap-4 px-6 py-4 hover:bg-muted/50 transition-colors"
                   style={{ animationDelay: `${i * 30}ms` }}
                 >
                   <div className="flex-1 min-w-0">

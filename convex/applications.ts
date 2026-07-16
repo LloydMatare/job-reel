@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
+import { requireRecruiterOrAbove } from "./permissions";
 
 function getOrgId(
   identity: Record<string, unknown>,
@@ -52,6 +53,14 @@ export const applyToJob = mutation({
     await ctx.db.patch(args.jobId, {
       applicationCount: (job.applicationCount ?? 0) + 1,
     });
+
+    const company = await ctx.db.get("companies", job.companyId);
+    let employerEmail: string | undefined;
+    if (company) {
+      const owner = await ctx.db.get("users", company.ownerId);
+      if (owner?.email) employerEmail = owner.email;
+    }
+    return { employerEmail, jobTitle: job.title };
   },
 });
 
@@ -73,8 +82,8 @@ export const withdrawApplication = mutation({
     const app = await ctx.db.get("applications", args.applicationId);
     if (!app) throw new Error("Application not found");
     if (app.userId !== user._id) throw new Error("Not authorized");
-    if (app.status !== "pending")
-      throw new Error("Can only withdraw pending applications");
+    if (app.status !== "pending" && app.status !== "reviewing")
+      throw new Error("Can only withdraw pending or reviewing applications");
 
     const job = await ctx.db.get("jobs", app.jobId);
 
@@ -257,6 +266,8 @@ export const updateApplicationStatus = mutation({
     if (!company || company.clerkOrgId !== orgId)
       throw new Error("Not authorized");
 
+    await requireRecruiterOrAbove(ctx, company._id);
+
     await ctx.db.patch(args.applicationId, { status: args.status });
   },
 });
@@ -288,5 +299,66 @@ export const addEmployerNotes = mutation({
       throw new Error("Not authorized");
 
     await ctx.db.patch(args.applicationId, { employerNotes: args.notes });
+  },
+});
+
+export const getCompanyAnalytics = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    const orgId = getOrgId(identity as Record<string, unknown>);
+    if (!orgId) return null;
+
+    const company = await ctx.db
+      .query("companies")
+      .withIndex("by_clerk_org", (q) => q.eq("clerkOrgId", orgId))
+      .unique();
+    if (!company) return null;
+
+    const jobs = await ctx.db
+      .query("jobs")
+      .withIndex("by_company", (q) => q.eq("companyId", company._id))
+      .collect();
+
+    const statusBreakdown: Record<string, number> = {
+      pending: 0,
+      reviewing: 0,
+      shortlisted: 0,
+      rejected: 0,
+      hired: 0,
+    };
+
+    const dailyCounts: Record<string, number> = {};
+    const now = Date.now();
+    const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
+
+    for (const job of jobs) {
+      const apps = await ctx.db
+        .query("applications")
+        .withIndex("by_job", (q) => q.eq("jobId", job._id))
+        .collect();
+
+      for (const app of apps) {
+        const status = app.status as keyof typeof statusBreakdown;
+        if (status in statusBreakdown) statusBreakdown[status]++;
+
+        if (app._creationTime >= thirtyDaysAgo) {
+          const day = new Date(app._creationTime).toISOString().slice(0, 10);
+          dailyCounts[day] = (dailyCounts[day] ?? 0) + 1;
+        }
+      }
+    }
+
+    const timeSeries = Object.entries(dailyCounts)
+      .map(([date, count]) => ({ date, count }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    return {
+      statusBreakdown,
+      timeSeries,
+      totalApplications: Object.values(statusBreakdown).reduce((a, b) => a + b, 0),
+    };
   },
 });

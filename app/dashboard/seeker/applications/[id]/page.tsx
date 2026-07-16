@@ -1,14 +1,19 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useState } from "react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useParams, useRouter } from "next/navigation";
 import { StatusBadge } from "@/components/StatusBadge";
+import { AlertTriangle, XCircle } from "lucide-react";
 
 export default function SeekerApplicationDetailPage() {
   const params = useParams();
   const router = useRouter();
   const applicationId = params.id as string;
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const withdraw = useMutation(api.applications.withdrawApplication);
 
   const data = useQuery(api.applications.getApplication, {
     applicationId: applicationId as any,
@@ -61,6 +66,19 @@ export default function SeekerApplicationDetailPage() {
           </div>
           <StatusBadge status={app.status} />
         </div>
+
+        {(app.status === "pending" || app.status === "reviewing") && (
+          <div className="flex justify-end">
+            <button
+              onClick={() => setShowConfirm(true)}
+              disabled={withdrawing}
+              className="inline-flex items-center gap-1.5 text-sm text-red-600 hover:text-red-700 font-medium disabled:opacity-50 transition-colors"
+            >
+              <XCircle className="size-4" />
+              {withdrawing ? "Withdrawing..." : "Withdraw Application"}
+            </button>
+          </div>
+        )}
 
         {job && (
           <div className="bg-gray-50 rounded-lg p-4 space-y-2">
@@ -186,6 +204,50 @@ export default function SeekerApplicationDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Confirm Withdraw Modal */}
+      {showConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="size-10 rounded-xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
+                <AlertTriangle className="size-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                  Withdraw Application?
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  This action cannot be undone.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                onClick={() => setShowConfirm(false)}
+                className="px-4 py-2 text-sm font-medium rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  setWithdrawing(true);
+                  setShowConfirm(false);
+                  try {
+                    await withdraw({ applicationId: applicationId as any });
+                    router.push("/dashboard/seeker/applications");
+                  } finally {
+                    setWithdrawing(false);
+                  }
+                }}
+                className="px-4 py-2 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
+              >
+                Withdraw
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

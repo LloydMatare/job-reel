@@ -30,6 +30,7 @@ export function Header() {
   }, [mobileOpen]);
 
   const navLinks = [
+    { href: "/insights", label: "Insights", show: true },
     { href: "/jobs", label: "Find Jobs", show: true },
     {
       href: "/dashboard/seeker/applications",

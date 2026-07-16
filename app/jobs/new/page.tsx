@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
@@ -10,6 +10,7 @@ export default function NewJobPage() {
   const router = useRouter();
   const { orgSlug } = useAuth();
   const createJob = useMutation(api.jobs.createJob);
+  const sendNotification = useAction(api.notifications.sendJobPostedNotification);
   const categories = useQuery(api.categories.listCategories);
   const company = useQuery(api.companies.getMyCompany);
 
@@ -61,7 +62,7 @@ export default function NewJobPage() {
         ? skillsInput.split(",").map((s) => s.trim()).filter(Boolean)
         : undefined;
 
-      await createJob({
+      const result = await createJob({
         title: title.trim(),
         description: description.trim(),
         requirements: requirements.trim() || undefined,
@@ -75,6 +76,14 @@ export default function NewJobPage() {
         skills: skills?.length ? skills : undefined,
         status,
       });
+
+      if (result?.employerEmail && status === "active") {
+        sendNotification({
+          employerEmail: result.employerEmail,
+          jobTitle: result.jobTitle ?? title,
+          jobUrl: `${window.location.origin}/jobs/${result.jobId}`,
+        });
+      }
 
       router.push(orgSlug ? `/orgs/${orgSlug}/dashboard` : "/profile");
     } catch (err) {

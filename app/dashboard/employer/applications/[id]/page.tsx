@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -22,6 +22,7 @@ export default function EmployerApplicationDetailPage() {
     applicationId: applicationId as any,
   });
   const updateStatus = useMutation(api.applications.updateApplicationStatus);
+  const sendNotification = useAction(api.notifications.sendStatusNotification);
   const addNotes = useMutation(api.applications.addEmployerNotes);
 
   const [notes, setNotes] = useState("");
@@ -61,6 +62,14 @@ export default function EmployerApplicationDetailPage() {
     status: "reviewing" | "shortlisted" | "rejected" | "hired",
   ) => {
     await updateStatus({ applicationId: applicationId as any, status });
+    if (applicant?.email) {
+      sendNotification({
+        seekerEmail: applicant.email,
+        jobTitle,
+        status,
+        companyName: job?.company?.name,
+      });
+    }
   };
 
   const handleSaveNotes = async () => {

@@ -170,4 +170,17 @@ export default defineSchema({
     slug: v.string(),
     icon: v.optional(v.string()),
   }).index("by_slug", ["slug"]),
+
+  company_members: defineTable({
+    companyId: v.id("companies"),
+    userId: v.id("users"),
+    role: v.union(
+      v.literal("admin"),
+      v.literal("recruiter"),
+      v.literal("member"),
+    ),
+  })
+    .index("by_company", ["companyId"])
+    .index("by_user", ["userId"])
+    .index("by_company_and_user", ["companyId", "userId"]),
 });

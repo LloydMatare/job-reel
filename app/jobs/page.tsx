@@ -2,7 +2,7 @@
 
 import { usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SalarySlider } from "@/components/SalarySlider";
+import { Bell } from "lucide-react";
 
 export default function JobsPage() {
   const searchParams = useSearchParams();
@@ -30,6 +31,8 @@ export default function JobsPage() {
   const [salaryMin, setSalaryMin] = useState<number | undefined>(undefined);
   const [salaryMax, setSalaryMax] = useState<number | undefined>(undefined);
   const [query, setQuery] = useState(initialQuery);
+
+  const router = useRouter();
 
   const { results, status, loadMore } = usePaginatedQuery(
     api.jobs.listJobs,
@@ -53,7 +56,7 @@ export default function JobsPage() {
       <Header />
       <main className="min-h-screen bg-gray-50">
         <div className="bg-white border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pt-20">
             <h1 className="text-3xl font-bold text-gray-900 mb-4">
               Find Jobs
             </h1>
@@ -196,6 +199,20 @@ export default function JobsPage() {
                     setSalaryMax(max);
                   }}
                 />
+
+                <div className="pt-3 border-t border-gray-200">
+                  <button
+                    onClick={() =>
+                      router.push(
+                        `/dashboard/seeker/alerts?q=${encodeURIComponent(query)}&category=${encodeURIComponent(category)}`,
+                      )
+                    }
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:opacity-90 transition-opacity"
+                  >
+                    <Bell className="size-4" />
+                    Create Alert
+                  </button>
+                </div>
               </div>
             </aside>
 

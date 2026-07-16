@@ -6,6 +6,8 @@ import { useEffect, ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import {
   Sidebar,
   SidebarContent,
@@ -31,14 +33,6 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 
-const NAV_ITEMS = [
-  { href: "/dashboard/employer", label: "Overview", icon: LayoutDashboard },
-  { href: "/dashboard/employer/applications", label: "Applications", icon: FileText },
-  { href: "/dashboard/employer/analytics", label: "Analytics", icon: ChartBar },
-  { href: "/jobs/new", label: "Post a Job", icon: Briefcase },
-  { href: "/profile", label: "Company Profile", icon: Building2 },
-];
-
 function getPageTitle(pathname: string): string {
   if (pathname === "/dashboard/employer") return "Overview";
   if (pathname.startsWith("/dashboard/employer/applications")) return pathname === "/dashboard/employer/applications" ? "Applications" : "Application Detail";
@@ -54,6 +48,17 @@ export default function EmployerDashboardLayout({
   const { isSignedIn } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const myRole = useQuery(api.permissions.getMyCompanyRole);
+
+  const canManage = myRole === "admin" || myRole === "recruiter";
+
+  const navItems = [
+    { href: "/dashboard/employer", label: "Overview", icon: LayoutDashboard },
+    { href: "/dashboard/employer/applications", label: "Applications", icon: FileText },
+    ...(canManage ? [{ href: "/dashboard/employer/analytics", label: "Analytics", icon: ChartBar }] : []),
+    ...(canManage ? [{ href: "/jobs/new", label: "Post a Job", icon: Briefcase }] : []),
+    ...(myRole === "admin" ? [{ href: "/profile", label: "Company Profile", icon: Building2 }] : []),
+  ];
 
   useEffect(() => {
     if (!isSignedIn) router.push("/");
@@ -84,7 +89,7 @@ export default function EmployerDashboardLayout({
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
-                {NAV_ITEMS.map((item) => {
+                {navItems.map((item) => {
                   const Icon = item.icon;
                   const isActive =
                     pathname === item.href ||

@@ -4,6 +4,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { OnboardingBanner } from "@/components/OnboardingBanner";
 import {
   FileText,
   Bookmark,
@@ -90,6 +91,9 @@ export default function SeekerOverviewPage() {
 
   return (
     <div className="space-y-8">
+      {currentUser && !currentUser.onboarded && (
+        <OnboardingBanner type="seeker" />
+      )}
       <div>
         <h1 className="text-2xl font-bold text-foreground tracking-tight">
           Welcome back{currentUser?.name ? `, ${currentUser.name}` : ""}!

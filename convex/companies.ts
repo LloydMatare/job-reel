@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
+import { requireAdmin } from "./permissions";
 
 function getOrgId(
   identity: Record<string, unknown>,
@@ -152,6 +153,12 @@ export const createOrgCompany = mutation({
 
     await ctx.db.patch(user._id, { companyId });
 
+    await ctx.db.insert("company_members", {
+      companyId,
+      userId: user._id,
+      role: "admin",
+    });
+
     return companyId;
   },
 });
@@ -178,6 +185,8 @@ export const updateCompany = mutation({
       .unique();
 
     if (!company) throw new Error("Company not found");
+
+    await requireAdmin(ctx, company._id);
 
     const patch: Record<string, unknown> = {};
     if (args.name !== undefined) {
@@ -222,6 +231,8 @@ export const uploadCompanyLogo = mutation({
       .unique();
 
     if (!company) throw new Error("Company not found");
+
+    await requireAdmin(ctx, company._id);
 
     await ctx.db.patch(company._id, { logoStorageId: args.storageId });
   },

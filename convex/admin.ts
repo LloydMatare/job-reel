@@ -33,9 +33,38 @@ export const getAllCompanies = query({
     return Promise.all(
       companies.map(async (c) => {
         const owner = await ctx.db.get(c.ownerId);
-        return { ...c, ownerName: owner?.name ?? "Unknown" };
+        const jobs = await ctx.db
+          .query("jobs")
+          .withIndex("by_company", (q: any) => q.eq("companyId", c._id))
+          .collect();
+        const jobCount = jobs.length;
+        const activeJobs = jobs.filter((j) => j.status === "active").length;
+        return {
+          ...c,
+          ownerName: owner?.name ?? "Unknown",
+          jobCount,
+          activeJobs,
+        };
       }),
     );
+  },
+});
+
+export const getAllJobs = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    await checkAdmin(ctx, identity.tokenIdentifier);
+
+    const companies = await ctx.db.query("companies").collect();
+    const companyMap = new Map(companies.map((c) => [c._id, c.name]));
+
+    const jobs = await ctx.db.query("jobs").order("desc").take(500);
+    return jobs.map((j) => ({
+      ...j,
+      companyName: companyMap.get(j.companyId) ?? "Unknown",
+    }));
   },
 });
 
